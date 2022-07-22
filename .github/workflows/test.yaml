@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: ['3.9', '3.10']
+        python: ["3.9", "3.10"]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -20,13 +20,15 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
-          architecture: 'x64'
+          architecture: "x64"
       - name: Cache venv
         uses: actions/cache@v2
         with:
           path: venv
           # Look to see if there is a cache hit for the corresponding requirements file
-          key: poetryenv-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('poetry.lock') }}
+          key:
+            poetryenv-${{ matrix.os }}-${{ matrix.python }}-${{
+            hashFiles('poetry.lock') }}
       - name: Install Dependencies
         run: |
           python3 -m venv venv
@@ -49,11 +51,10 @@ jobs:
       - uses: codespell-project/actions-codespell@master
         with:
           ignore_words_list: fo,ists,oll,optin,ot,smove,tre,whe
-          exclude_file: docs/assets/demo.svg
       - uses: actions/setup-python@v1
         with:
           python-version: 3.7
-          architecture: 'x64'
+          architecture: "x64"
       - name: Cache venv
         uses: actions/cache@v2
         with:
