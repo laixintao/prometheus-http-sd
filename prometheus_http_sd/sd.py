@@ -57,7 +57,7 @@ def run_generator(generator_path: str) -> TargetList:
     elif generator_path.endswith(".py"):
         return run_python(generator_path)
     else:
-        raise Exception(f"Unknow File Type: {generator_path}")
+        raise Exception(f"Unknown File Type: {generator_path}")
 
 
 def run_file(file_path: str) -> TargetList:
