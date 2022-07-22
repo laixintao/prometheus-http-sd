@@ -15,5 +15,9 @@ flake8 = "^4.0.1"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
 [tool.black]
 line-length = 80
+
+[tool.poetry.scripts]
+prometheus-http-sd = 'prometheus_http_sd.app:main'
