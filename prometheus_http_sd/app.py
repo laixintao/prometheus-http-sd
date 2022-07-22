@@ -22,9 +22,10 @@ app = Flask(__name__)
 DEBUG = os.environ.get(consts.DEBUG_ENV_NAME) == "True"
 
 
-@app.route("/targets")
-def get_targets():
-    targets = generate()
+@app.route("/targets", defaults={"path": ""})
+@app.route("/targets/<string:path>")
+def get_targets(path):
+    targets = generate(path)
     return jsonify(targets)
 
 

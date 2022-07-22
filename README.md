@@ -1,6 +1,8 @@
 # prometheus-http-sd
 
-Prometheus HTTP SD framework.
+This is a
+[Prometheus HTTP SD](https://prometheus.io/docs/prometheus/latest/http_sd/)
+framework.
 
 ## Features
 

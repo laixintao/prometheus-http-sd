@@ -1,0 +1,12 @@
+[
+  {
+    "targets": [
+      "10.71.11.1:3333",
+      "10.71.11.2:3333"
+    ],
+    "labels": {
+      "__meta_datacenter": "singapore",
+      "__meta_prometheus_job": "nginx"
+    }
+  }
+]
