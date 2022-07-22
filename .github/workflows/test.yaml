@@ -69,7 +69,7 @@ jobs:
       - name: Flake8 test
         run: |
           . venv/bin/activate
-          flake8 .
+          flake8 --exclude venv .
       - name: Black test
         run: |
           . venv/bin/activate
