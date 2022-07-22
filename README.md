@@ -39,7 +39,60 @@ $ export PROMETHEUS_HTTP_SD_DIR=/tmp/targets
 
 Finally, you can run `prometheus-http-sd serve 0.0.0.0 8080`.
 
-## Using Different Pathes
+## The Target Path
+
+prometheus-http-sd support sub-pathes.
+
+For example, if we use `export PROMETHEUS_HTTP_SD_DIR=gateway`, and the
+`gateway` directory's structure is as follows:
+
+```shell
+gateway
+├── nginx
+│   ├── edge.py
+│   └── targets.json
+└── targets.json
+```
+
+Then:
+
+- `/targets/gateway` will return the targets from:
+  - `gateway/nginx/edge.py`
+  - `gateway/nginx/targets.json`
+  - `gateway/targets.json`
+- `/targets/gateway/nginx` will return the targets from:
+  - `gateway/nginx/edge.py`
+  - `gateway/nginx/targets.json`
+
+This is very useful when you use vertical scaling. Say you have 5 Prometheus
+instances, and you want each one of them scrape for different targets, then you
+can use the sub-path feature of prometheus-http-sd.
+
+For example, in one Prometheus's config:
+
+```yaml
+scrape_configs:
+  - job_name: "nginx"
+    http_sd_config:
+      url: http://prometheus-http-sd:8080/targets/nginx
+
+  - job_name: "etcd"
+    http_sd_config:
+      url: http://prometheus-http-sd:8080/targets/etcd
+```
+
+And in another one:
+
+```yaml
+scrape_configs:
+  - job_name: "nginx"
+    http_sd_config:
+      url: http://prometheus-http-sd:8080/targets/database
+
+  - job_name: "etcd"
+    http_sd_config:
+      url: http://prometheus-http-sd:8080/targets/application
+```
 
 ## Update Your Scripts
 
