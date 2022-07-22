@@ -64,7 +64,7 @@ def run_file(file_path: str) -> TargetList:
     try:
         with open(file_path) as jsonf:
             return json.load(jsonf)
-    except:
+    except json.decoder.JSONDecodeError:
         logger.exception(f"error when parse file {file_path}!")
         return []
 
@@ -72,9 +72,7 @@ def run_file(file_path: str) -> TargetList:
 def run_python(generator_path) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
-    loader = importlib.machinery.SourceFileLoader(
-        "mymodule", generator_path
-    )
+    loader = importlib.machinery.SourceFileLoader("mymodule", generator_path)
     spec = importlib.util.spec_from_loader("mymodule", loader)
     mymodule = importlib.util.module_from_spec(spec)
     loader.exec_module(mymodule)
