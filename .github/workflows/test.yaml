@@ -13,7 +13,6 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python: ['3.9', '3.10']
-        redis: [5, 6, 7]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -38,8 +37,6 @@ jobs:
           python -c "import sys; print(sys.version)"
           pip list
       - name: Pytest
-        env:
-          REDIS_VERSION: ${{ matrix.redis }}
         run: |
           . venv/bin/activate
           pytest
