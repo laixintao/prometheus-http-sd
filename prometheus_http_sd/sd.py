@@ -17,7 +17,8 @@ def run_python(generator_path) -> TargetList:
 def get_generator_list(path: str = "") -> List[str]:
     """
     generate targets start from ``path``
-    if ``path`` is None or empty, then start from the root path ``TARGETS_DIR_ENV_NAME ``
+    if ``path`` is None or empty, then start from the root path
+    ``TARGETS_DIR_ENV_NAME ``
     """
     start_path = os.environ[TARGETS_DIR_ENV_NAME]
     if path:
