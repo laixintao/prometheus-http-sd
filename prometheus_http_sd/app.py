@@ -2,6 +2,8 @@ import logging
 import sys
 
 import click
+import waitress
+
 from flask import Flask, jsonify
 from .sd import generate
 from . import consts
@@ -22,9 +24,10 @@ app = Flask(__name__)
 DEBUG = os.environ.get(consts.DEBUG_ENV_NAME) == "True"
 
 
-@app.route("/targets")
-def get_targets():
-    targets = generate()
+@app.route("/targets", defaults={"path": ""})
+@app.route("/targets/<string:path>")
+def get_targets(path):
+    targets = generate(path)
     return jsonify(targets)
 
 
@@ -39,7 +42,7 @@ def admin():
 )
 @click.option("--port", "-p", default=8080, help="The port to bind to.")
 def main(host, port):
-    app.run(host=host, port=port, threaded=True, debug=DEBUG)
+    waitress.serve(app, host=host, port=port)
 
 
 if __name__ == "__main__":
