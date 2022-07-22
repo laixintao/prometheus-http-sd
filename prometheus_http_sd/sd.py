@@ -14,7 +14,7 @@ def run_python(generator_path) -> TargetList:
     return module.generate_targets()
 
 
-def get_generator_list(path: str = None) -> List[str]:
+def get_generator_list(path: str = "") -> List[str]:
     """
     generate targets start from ``path``
     if ``path`` is None or empty, then start from the root path ``TARGETS_DIR_ENV_NAME ``
@@ -40,7 +40,7 @@ def get_generator_list(path: str = None) -> List[str]:
     return generators
 
 
-def generate(path: str) -> TargetList:
+def generate(path: str = "") -> TargetList:
     generators = get_generator_list(path)
     all_targets = []
     for generator in generators:

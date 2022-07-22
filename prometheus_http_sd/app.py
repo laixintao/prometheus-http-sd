@@ -2,6 +2,7 @@ import logging
 import sys
 
 from flask import Flask
+from .sd import generate
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 
@@ -18,6 +19,7 @@ app = Flask(__name__)
 
 @app.route("/targets")
 def get_targets():
+    targets = generate()
     return None
 
 
