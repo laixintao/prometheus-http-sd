@@ -33,7 +33,7 @@ DEBUG = os.environ.get(consts.DEBUG_ENV_NAME) == "True"
 
 path_last_generated_targets = Gauge(
     "httpsd_path_last_generated_targets",
-    "Genarated targets count in last request",
+    "Generated targets count in last request",
     ["path"],
 )
 version_info = Info(
