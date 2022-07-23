@@ -62,7 +62,7 @@ def get_targets(path):
     with target_path_request_duration_seconds.labels(path=path).time():
         try:
             targets = generate(path)
-        except:
+        except:  # noqa: E722
             target_path_requests_total.labels(path=path, status="fail").inc()
             raise
         else:

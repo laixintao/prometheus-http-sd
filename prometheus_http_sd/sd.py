@@ -81,7 +81,9 @@ def run_generator(generator_path: str) -> TargetList:
         ).inc()
         raise Exception(f"Unknown File Type: {generator_path}")
 
-    with generator_run_duration_seconds.labels(generator=generator_path).time():
+    with generator_run_duration_seconds.labels(
+        generator=generator_path
+    ).time():
         result = executor(generator_path)
         generator_last_generated_targets.labels(generator=generator_path).set(
             len(result)
