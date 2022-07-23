@@ -9,9 +9,13 @@ import importlib.util
 from typing import List
 from .consts import TARGETS_DIR_ENV_NAME
 from .targets import TargetList
+from prometheus_client import Gauge
 
 logger = logging.getLogger(__name__)
 
+target_path_requests_total
+    error?
+target_path_request_duration_seconds
 
 def get_generator_list(path: str = "") -> List[str]:
     """

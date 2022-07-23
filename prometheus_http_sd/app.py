@@ -6,8 +6,9 @@ import waitress
 
 from flask import Flask, jsonify
 from .sd import generate
-from . import consts
+from . import consts, version
 import os
+from prometheus_client import Gauge
 
 stdout_handler = logging.StreamHandler(stream=sys.stdout)
 logging.basicConfig(
@@ -21,7 +22,22 @@ logging.basicConfig(
 logger = logging.getLogger("LOGGER_NAME")
 
 app = Flask(__name__)
+
+
 DEBUG = os.environ.get(consts.DEBUG_ENV_NAME) == "True"
+
+path_last_generated_targets_gauge = Gauge(
+    "httpsd_path_last_generated_targets_gauge",
+    "Genarated targets count in last request",
+    ["path"],
+)
+version_info = Gauge(
+    "httpsd_version_info", "prometheus_http_sd version info", ["version"]
+)
+version_info.labels(version=version.VERSION).set(1)
+target_path_requests_total
+    http_code
+target_path_request_duration_seconds
 
 
 @app.route("/targets", defaults={"path": ""})
