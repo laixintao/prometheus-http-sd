@@ -117,6 +117,11 @@ one failed for a request, prometheus-http-sd will return a HTTP 500 Error for
 the whole request instead of returning the partial targets from the other two
 scripts.
 
+Also for the same reason, if your script met any error, you should throw out
+`Exception` all the way to the top instead of catch it in your script and return
+a null `TargetList`, if you return a null `TargetList`, prometheus-http-sd will
+think that your script run successfully and empty the target list as well.
+
 You can notice this error from stdout logs or `/metrics` from
 prometheus-http-sd.
 
