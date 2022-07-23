@@ -9,7 +9,6 @@ from .sd import generate
 from . import consts, version
 import os
 from prometheus_client import Gauge, Counter, Histogram, Info
-from flask import Flask
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from prometheus_client import make_wsgi_app
 
@@ -27,7 +26,9 @@ logger = logging.getLogger("LOGGER_NAME")
 app = Flask(__name__)
 
 # Add prometheus wsgi middleware to route /metrics requests
-app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": make_wsgi_app()})
+app.wsgi_app = DispatcherMiddleware(
+    app.wsgi_app, {"/metrics": make_wsgi_app()}
+)
 
 DEBUG = os.environ.get(consts.DEBUG_ENV_NAME) == "True"
 
@@ -65,7 +66,9 @@ def get_targets(path):
             target_path_requests_total.labels(path=path, status="fail").inc()
             raise
         else:
-            target_path_requests_total.labels(path=path, status="success").inc()
+            target_path_requests_total.labels(
+                path=path, status="success"
+            ).inc()
             path_last_generated_targets.labels(path=path).set(len(targets))
 
             return jsonify(targets)
