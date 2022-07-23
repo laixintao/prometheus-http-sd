@@ -32,14 +32,15 @@ In this directory:
   utils there, for e.g. `_utils/__init__.py` that you can import in you
   `generate_targets()`
 
-Then, you need to tell prometheus-http-sd where it can find your targets
-directory by exporting an environment variable:
+Then you can run `prometheus-http-sd -h 0.0.0.0 -p 8080 /tmp/targets`,
+prometheus-http-sd will start to expose targets at: http://0.0.0.0:8080/targets
+
+The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 
 ```shell
-$ export PROMETHEUS_HTTP_SD_DIR=/tmp/targets
+$ poetry run prometheus-http-sd /tmp/good_root
+[2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
 ```
-
-Finally, you can run `prometheus-http-sd serve 0.0.0.0 8080`.
 
 ## The Target Path
 

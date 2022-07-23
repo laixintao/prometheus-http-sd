@@ -7,8 +7,8 @@ import importlib.machinery
 import importlib.util
 
 from typing import List
-from .consts import TARGETS_DIR_ENV_NAME
 from .targets import TargetList
+from .config import config
 from prometheus_client import Gauge, Counter, Histogram
 
 logger = logging.getLogger(__name__)
@@ -32,19 +32,18 @@ generator_run_duration_seconds = Histogram(
 )
 
 
-def get_generator_list(path: str = "") -> List[str]:
+def get_generator_list(root: str, path: str = "") -> List[str]:
     """
     generate targets start from ``path``
     if ``path`` is None or empty, then start from the root path
     ``TARGETS_DIR_ENV_NAME ``
     """
-    start_path = os.environ[TARGETS_DIR_ENV_NAME]
     if path:
-        start_path = os.path.join(start_path, path)
+        root = os.path.join(root, path)
 
     generators = []
 
-    for root, _, files in os.walk(start_path):
+    for root, _, files in os.walk(root):
         for file in files:
             full_path = os.path.join(root, file)
 
@@ -60,8 +59,8 @@ def get_generator_list(path: str = "") -> List[str]:
     return generators
 
 
-def generate(path: str = "") -> TargetList:
-    generators = get_generator_list(path)
+def generate(root: str, path: str = "") -> TargetList:
+    generators = get_generator_list(root, path)
     all_targets = []
     for generator in generators:
         target_list = run_generator(generator)
