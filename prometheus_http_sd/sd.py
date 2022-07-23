@@ -9,8 +9,27 @@ import importlib.util
 from typing import List
 from .consts import TARGETS_DIR_ENV_NAME
 from .targets import TargetList
+from prometheus_client import Gauge, Counter, Histogram
 
 logger = logging.getLogger(__name__)
+
+generator_requests_total = Counter(
+    "httpsd_generator_requests_total",
+    "The total count that this generator executed, status can be success/fail",
+    ["generator", "status"],
+)
+
+generator_last_generated_targets = Gauge(
+    "httpsd_generator_last_generated_targets",
+    "The target count that this generator gets during its last execution",
+    ["generator"],
+)
+
+generator_run_duration_seconds = Histogram(
+    "httpsd_generator_run_duration_seconds",
+    "The time cost that this generator run",
+    ["generator"],
+)
 
 
 def get_generator_list(path: str = "") -> List[str]:
@@ -53,20 +72,32 @@ def generate(path: str = "") -> TargetList:
 
 def run_generator(generator_path: str) -> TargetList:
     if generator_path.endswith(".json"):
-        return run_file(generator_path)
+        executor = run_file
     elif generator_path.endswith(".py"):
-        return run_python(generator_path)
+        executor = run_python
     else:
+        generator_requests_total.labels(
+            generator=generator_path, status="fail"
+        ).inc()
         raise Exception(f"Unknown File Type: {generator_path}")
+
+    with generator_run_duration_seconds.labels(
+        generator=generator_path
+    ).time():
+        result = executor(generator_path)
+        generator_last_generated_targets.labels(generator=generator_path).set(
+            len(result)
+        )
+
+    generator_requests_total.labels(
+        generator=generator_path, status="success"
+    ).inc()
+    return result
 
 
 def run_file(file_path: str) -> TargetList:
-    try:
-        with open(file_path) as jsonf:
-            return json.load(jsonf)
-    except json.decoder.JSONDecodeError:
-        logger.exception(f"error when parse file {file_path}!")
-        return []
+    with open(file_path) as jsonf:
+        return json.load(jsonf)
 
 
 def run_python(generator_path) -> TargetList:
@@ -74,8 +105,11 @@ def run_python(generator_path) -> TargetList:
 
     loader = importlib.machinery.SourceFileLoader("mymodule", generator_path)
     spec = importlib.util.spec_from_loader("mymodule", loader)
-    mymodule = importlib.util.module_from_spec(spec)
-    loader.exec_module(mymodule)
+    if spec:
+        mymodule = importlib.util.module_from_spec(spec)
+        loader.exec_module(mymodule)
+    else:
+        raise Exception("Load a None module!")
 
     return mymodule.generate_targets()
 
