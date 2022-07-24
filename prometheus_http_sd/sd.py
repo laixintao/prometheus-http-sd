@@ -8,7 +8,6 @@ import importlib.util
 
 from typing import List
 from .targets import TargetList
-from .config import config
 from prometheus_client import Gauge, Counter, Histogram
 
 logger = logging.getLogger(__name__)
