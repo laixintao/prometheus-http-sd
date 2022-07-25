@@ -54,8 +54,8 @@ target_path_request_duration_seconds = Histogram(
 )
 
 
-@app.route("/targets", defaults={"path": ""})
-@app.route("/targets/", defaults={"path": ""})
+@app.route("/targets", defaults={"rest_path": ""})
+@app.route("/targets/", defaults={"rest_path": ""})
 # match the rest of the path
 @app.route("/targets/<path:rest_path>")
 def get_targets(rest_path):
