@@ -56,19 +56,25 @@ target_path_request_duration_seconds = Histogram(
 
 @app.route("/targets", defaults={"path": ""})
 @app.route("/targets/", defaults={"path": ""})
-@app.route("/targets/<string:path>")
-def get_targets(path):
-    with target_path_request_duration_seconds.labels(path=path).time():
+# match the rest of the path
+@app.route("/targets/<path:rest_path>")
+def get_targets(rest_path):
+    logger.info("request target path: {}".format(rest_path))
+    with target_path_request_duration_seconds.labels(path=rest_path).time():
         try:
-            targets = generate(config.root_dir, path)
+            targets = generate(config.root_dir, rest_path)
         except:  # noqa: E722
-            target_path_requests_total.labels(path=path, status="fail").inc()
+            target_path_requests_total.labels(
+                path=rest_path, status="fail"
+            ).inc()
             raise
         else:
             target_path_requests_total.labels(
-                path=path, status="success"
+                path=rest_path, status="success"
             ).inc()
-            path_last_generated_targets.labels(path=path).set(len(targets))
+            path_last_generated_targets.labels(path=rest_path).set(
+                len(targets)
+            )
 
             return jsonify(targets)
 
