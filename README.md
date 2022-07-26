@@ -13,6 +13,10 @@ framework.
 
 ## Installation
 
+```shell
+pip install prometheus-http-sd
+```
+
 ## Usage
 
 First, you need a directory, everything in this directory will be used to
@@ -41,6 +45,12 @@ The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 $ poetry run prometheus-http-sd /tmp/good_root
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
 ```
+
+### Script Dependencies
+
+If you want your scripts to use some other python library, just install them
+into the **same virtualenv** that you install prometheus-http-sd, so that
+prometheus-http-sd can import them.
 
 ## The Target Path
 
