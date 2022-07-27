@@ -47,7 +47,7 @@ def get_generator_list(root: str, path: str = "") -> List[str]:
             full_path = os.path.join(root, file)
 
             should_ignore = any(
-                p.startswith("_")
+                p.startswith("_") or p.startswith(".")
                 for p in os.path.normpath(full_path).split(os.sep)
             )
             if should_ignore:
