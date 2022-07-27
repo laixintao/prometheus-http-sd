@@ -2,7 +2,8 @@ import typing
 
 
 class Target:
-    pass
+    targets: typing.List[str]
+    labels: typing.Dict[str, str]
 
 
 TargetList = typing.List[Target]
