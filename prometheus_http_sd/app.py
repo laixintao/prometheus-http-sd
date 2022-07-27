@@ -37,7 +37,7 @@ path_last_generated_targets = Gauge(
     ["path"],
 )
 version_info = Info(
-    "httpsd_version_info",
+    "httpsd_version",
     "prometheus_http_sd version info",
 )
 version_info.info({"version": VERSION})
