@@ -43,7 +43,7 @@ prometheus-http-sd will start to expose targets at: http://0.0.0.0:8080/targets
 The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 
 ```shell
-$ poetry run prometheus-http-sd /tmp/good_root
+$ prometheus-http-sd /tmp/good_root
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
 ```
 
