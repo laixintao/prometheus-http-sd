@@ -35,7 +35,7 @@ In this directory:
 - Filename that starts with `_` will be ignored, so you can have some python
   utils there, for e.g. `_utils/__init__.py` that you can import in you
   `generate_targets()`
-- Filename that starts with `.` (hidden file in Linux) will also be ignore
+- Filename that starts with `.` (hidden file in Linux) will also be ignored
 
 Then you can run `prometheus-http-sd -h 0.0.0.0 -p 8080 /tmp/targets`,
 prometheus-http-sd will start to expose targets at: http://0.0.0.0:8080/targets
