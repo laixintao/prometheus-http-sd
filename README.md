@@ -111,7 +111,7 @@ scrape_configs:
 ## Update Your Scripts
 
 If you want to update your script file or target json file, just upload and
-overwirte with your new version, it will take effect immediately after you
+overwrite with your new version, it will take effect immediately after you
 making changes, **there is no need to restart** prometheus-http-sd,
 prometheus-http-sd will read the file (or reload the python script) every time
 serving a request.
