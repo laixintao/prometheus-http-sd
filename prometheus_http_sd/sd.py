@@ -10,6 +10,13 @@ from typing import List
 from .targets import TargetList
 from prometheus_client import Gauge, Counter, Histogram
 
+import yaml
+
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
 logger = logging.getLogger(__name__)
 
 generator_requests_total = Counter(
@@ -73,6 +80,8 @@ def run_generator(generator_path: str) -> TargetList:
         executor = run_json
     elif generator_path.endswith(".py"):
         executor = run_python
+    elif generator_path.endswith(".yaml"):
+        executor = run_yaml
     else:
         generator_requests_total.labels(
             generator=generator_path, status="fail"
@@ -110,6 +119,12 @@ def run_python(generator_path) -> TargetList:
         raise Exception("Load a None module!")
 
     return mymodule.generate_targets()
+
+
+def run_yaml(file_path: str):
+    with open(file_path) as yamlf:
+        data = yaml.load(yamlf, Loader=Loader)
+        return data
 
 
 if __name__ == "__main__":

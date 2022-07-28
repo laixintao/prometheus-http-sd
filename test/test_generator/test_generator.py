@@ -21,3 +21,17 @@ def test_parse_json():
             },
         }
     ]
+
+
+def test_parse_yaml():
+    targets = generate(root, "yaml")
+    assert targets == [
+        {
+            "targets": ["10.1.1.9:9100", "10.1.1.10:9100"],
+            "labels": {"job": "node", "datacenter": "nyc", "group": "g1"},
+        },
+        {
+            "targets": ["10.2.1.9:9100", "10.2.1.10:9100"],
+            "labels": {"job": "node", "datacenter": "sg", "group": "g2"},
+        },
+    ]
