@@ -8,7 +8,8 @@ framework.
 
 ## Features
 
-- Support static targets json file;
+- Support static targets from Json file;
+- Support static targets from Yaml file;
 - Support generating target list using Python script;
 
 ## Installation
@@ -29,6 +30,7 @@ $ mkdir targets
 In this directory:
 
 - Filename that ending with `.json` will be exposed directly
+- Filename that ending with `.yaml` will be exposed directly
 - Filename that ending with `.py` must include a `generate_targets()` function,
   the function will be run, and it must return a `TargetList` (Type helper in
   `prometheus_http_sd.targets.`)
