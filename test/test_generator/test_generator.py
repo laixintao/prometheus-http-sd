@@ -5,8 +5,8 @@ from pathlib import Path
 root = str(Path(__file__).parent / "root")
 
 
-def test_underscore_should_be_ignored():
-    targets = generate(root)
+def test_parse_json():
+    targets = generate(root, "json")
     assert targets == [
         {
             "targets": [
