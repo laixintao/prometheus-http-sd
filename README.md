@@ -10,6 +10,8 @@ framework.
 
 - Support static targets from Json file;
 - Support static targets from Yaml file;
+- Support caching for the generated result, one prometheus-http-sd can serve
+  thousands of prometheus instances;
 - Support generating target list using Python script;
 
 ## Installation
@@ -138,6 +140,21 @@ think that your script run successfully and empty the target list as well.
 
 You can notice this error from stdout logs or `/metrics` from
 prometheus-http-sd.
+
+## The Cache
+
+You can set the cache refresh interval via cli arg `--cache-refresh-seconds`.
+
+If set to 0, prometheus-http-sd will not cache your result, every time it
+receives a request, it will re-evaluate the file or script to generate the
+targets again;
+
+If set to > 1 (let say, `-- cache-refresh-seconds 600`, which is 10 minutes),
+then prometheus-http-sd will evaluate every generator on startup and at every
+600 seconds, and the response will be served via its cache directly, in this
+will, it can protect the backend resources that prometheus-http-sd use, whatever
+how many Prometheus instances you have, prometheus-http-sd can always serve the
+requests very fast.
 
 ## Best Practice
 
