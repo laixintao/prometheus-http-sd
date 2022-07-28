@@ -1,7 +1,7 @@
 import typing
 
 
-class Target:
+class Target(typing.TypedDict):
     targets: typing.List[str]
     labels: typing.Dict[str, str]
 
