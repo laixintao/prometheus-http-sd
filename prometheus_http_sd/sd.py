@@ -44,6 +44,7 @@ def get_generator_list(root: str, path: str = "") -> List[str]:
     if ``path`` is None or empty, then start from the root path
     ``TARGETS_DIR_ENV_NAME ``
     """
+    logger.debug(f"{root=}, {path=}")
     if path:
         root = os.path.join(root, path)
 
@@ -53,15 +54,18 @@ def get_generator_list(root: str, path: str = "") -> List[str]:
         for file in files:
             full_path = os.path.join(root, file)
 
-            should_ignore = any(
-                p.startswith("_") or p.startswith(".")
+            logger.debug(f"{full_path=}")
+            should_ignore_underscore = any(
+                p.startswith("_")
                 for p in os.path.normpath(full_path).split(os.sep)
             )
-            if should_ignore:
+            should_ignore_hidden = file.startswith(".")
+            if should_ignore_hidden or should_ignore_underscore:
                 continue
 
             generators.append(full_path)
 
+    logger.debug(f"{generators=}")
     return generators
 
 
@@ -93,7 +97,7 @@ def run_generator(generator_path: str) -> TargetList:
     ).time():
         result = executor(generator_path)
         generator_last_generated_targets.labels(generator=generator_path).set(
-            len(result)
+            sum(len(t.get("targets", [])) for t in result)
         )
 
     generator_requests_total.labels(

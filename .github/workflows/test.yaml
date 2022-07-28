@@ -53,7 +53,7 @@ jobs:
           ignore_words_list: fo,ists,oll,optin,ot,smove,tre,whe
       - uses: actions/setup-python@v1
         with:
-          python-version: 3.7
+          python-version: 3.9
           architecture: "x64"
       - name: Cache venv
         uses: actions/cache@v2

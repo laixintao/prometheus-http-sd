@@ -12,16 +12,20 @@ from prometheus_client import Gauge, Counter, Histogram, Info
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from prometheus_client import make_wsgi_app
 
-stdout_handler = logging.StreamHandler(stream=sys.stdout)
-logging.basicConfig(
-    level=logging.DEBUG,
-    format=(
-        "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-    ),
-    handlers=[stdout_handler],
-)
 
-logger = logging.getLogger("LOGGER_NAME")
+def config_log(level):
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+    logging.basicConfig(
+        level=level,
+        format=(
+            "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s -"
+            " %(message)s"
+        ),
+        handlers=[stdout_handler],
+    )
+
+
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -73,7 +77,7 @@ def get_targets(rest_path):
                 path=rest_path, status="success"
             ).inc()
             path_last_generated_targets.labels(path=rest_path).set(
-                len(targets)
+                sum(len(t.get("targets", [])) for t in targets)
             )
 
             return jsonify(targets)
@@ -89,11 +93,20 @@ def admin():
     "--host", "-h", default="127.0.0.1", help="The interface to bind to."
 )
 @click.option("--port", "-p", default=8080, help="The port to bind to.")
+@click.option(
+    "--log-level",
+    default=20,
+    help=(
+        "Python logging level, default 20,"
+        " https://docs.python.org/3/library/logging.html"
+    ),
+)
 @click.argument(
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
-def main(host, port, root_dir):
+def main(host, port, log_level, root_dir):
+    config_log(log_level)
     config.root_dir = root_dir
     waitress.serve(app, host=host, port=port)
 
