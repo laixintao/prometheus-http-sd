@@ -70,7 +70,7 @@ def generate(root: str, path: str = "") -> TargetList:
 
 def run_generator(generator_path: str) -> TargetList:
     if generator_path.endswith(".json"):
-        executor = run_file
+        executor = run_json
     elif generator_path.endswith(".py"):
         executor = run_python
     else:
@@ -93,7 +93,7 @@ def run_generator(generator_path: str) -> TargetList:
     return result
 
 
-def run_file(file_path: str) -> TargetList:
+def run_json(file_path: str) -> TargetList:
     with open(file_path) as jsonf:
         return json.load(jsonf)
 
