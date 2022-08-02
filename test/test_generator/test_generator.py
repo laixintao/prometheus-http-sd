@@ -40,4 +40,4 @@ def test_parse_yaml():
 
 def test_non_exist():
     with pytest.raises(FileNotFoundError):
-        targets = generate(root, "non-exist")
+        generate(root, "non-exist")
