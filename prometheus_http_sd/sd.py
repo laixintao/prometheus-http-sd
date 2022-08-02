@@ -5,6 +5,7 @@ import importlib
 import importlib.machinery
 
 import importlib.util
+from pathlib import Path
 
 from typing import List
 from .targets import TargetList
@@ -49,6 +50,9 @@ def get_generator_list(root: str, path: str = "") -> List[str]:
         root = os.path.join(root, path)
 
     generators = []
+
+    if not Path(root).exists():
+        raise FileNotFoundError(f"{root} not exist!")
 
     for root, _, files in os.walk(root):
         for file in files:

@@ -1,3 +1,4 @@
+import pytest
 from prometheus_http_sd.sd import generate
 from pathlib import Path
 
@@ -35,3 +36,8 @@ def test_parse_yaml():
             "labels": {"job": "node", "datacenter": "sg", "group": "g2"},
         },
     ]
+
+
+def test_non_exist():
+    with pytest.raises(FileNotFoundError):
+        targets = generate(root, "non-exist")
