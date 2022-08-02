@@ -4,7 +4,7 @@ import sys
 import click
 import waitress
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, abort
 from .sd import generate
 from .config import config
 from .version import VERSION
@@ -67,6 +67,8 @@ def get_targets(rest_path):
     with target_path_request_duration_seconds.labels(path=rest_path).time():
         try:
             targets = generate(config.root_dir, rest_path)
+        except FileNotFoundError:
+            abort(404)
         except:  # noqa: E722
             target_path_requests_total.labels(
                 path=rest_path, status="fail"
