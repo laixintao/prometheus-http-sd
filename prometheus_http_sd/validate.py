@@ -21,14 +21,16 @@ def validate(root_dir):
             if not all_good:
                 exit_0 = False
         end = time.time()
+        count = 0
+        count = sum(len(t["targets"]) for t in target_list)
         status = "PASS"
         if not all_good:
             status = "FAIL"
         logger.info(
             f"{status} run generator {generator}, took {end-start}s, generated"
-            f" {len(target_list)} targets."
+            f" {count} targets."
         )
-        total_targets += len(target_list)
+        total_targets += count
 
     logger.info(f"Done! Generated {total_targets} targets in total.")
     if exit_0:
