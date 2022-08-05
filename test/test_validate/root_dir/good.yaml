@@ -1,0 +1,13 @@
+- targets:
+    - "10.0.0.1:8080"
+    - "10.0.0.2:8080"
+  labels:
+    app: nginx
+    group: sg
+
+- targets:
+    - "10.0.0.4:8080"
+    - "10.0.0.6:8080"
+  labels:
+    app: nginx
+    group: sg

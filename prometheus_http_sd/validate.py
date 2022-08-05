@@ -1,0 +1,58 @@
+import sys
+import time
+import logging
+from .sd import get_generator_list, run_generator
+
+logger = logging.getLogger("checker")
+
+
+def validate(root_dir):
+    generators = get_generator_list(root_dir)
+
+    total_targets = 0
+    exit_0 = True
+
+    for generator in generators:
+        start = time.time()
+        target_list = run_generator(generator)
+        all_good = True
+        for t in target_list:
+            all_good = check_content(t)
+            if not all_good:
+                exit_0 = False
+        end = time.time()
+        status = "PASS"
+        if not all_good:
+            status = "FAIL"
+        logger.info(
+            f"{status} run generator {generator}, took {end-start}s, generated"
+            f" {len(target_list)} targets."
+        )
+        total_targets += len(target_list)
+
+    logger.info(f"Done! Generated {total_targets} targets in total.")
+    if exit_0:
+        sys.exit(0)
+    sys.exit(1)
+
+
+def check_content(target):
+    if "targets" not in target:
+        logger.warning(f"`targets` key is not in {target}")
+        return False
+
+    host_ports = target["targets"]
+    if not isinstance(host_ports, list):
+        logger.warning(f"`targets` key in {target} is not a array.")
+        return False
+    for k in host_ports:
+        if ":" not in k:
+            logger.warning(f"is target {k} missing port?")
+            return False
+
+    labels = target.get("labels")
+    if labels:
+        if not isinstance(labels, dict):
+            logger.warning(f"`labels` key in {target} is not a dict.")
+            return False
+    return True
