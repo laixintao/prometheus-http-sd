@@ -64,6 +64,9 @@ $ prometheus-http-sd check test/test_generator/root
 [2022-08-06 00:50:11,100] {validate.py:22} INFO - Done! Generated {total_targets} in total.
 ```
 
+It's a good idea to use `prometheus-http-sd check` in your CI system to validate
+your targets generator scripts and target files.
+
 ### Script Dependencies
 
 If you want your scripts to use some other python library, just install them
