@@ -8,6 +8,7 @@ from flask import Flask, jsonify, abort
 from .sd import generate
 from .config import config
 from .version import VERSION
+from .validate import validate
 from prometheus_client import Gauge, Counter, Histogram, Info
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from prometheus_client import make_wsgi_app
@@ -90,27 +91,41 @@ def admin():
     return ""
 
 
-@click.command()
-@click.option(
-    "--host", "-h", default="127.0.0.1", help="The interface to bind to."
-)
-@click.option("--port", "-p", default=8080, help="The port to bind to.")
+@click.group()
 @click.option(
     "--log-level",
     default=20,
     help=(
-        "Python logging level, default 20,"
+        "Python logging level, default 20, can set from 0 to 50, step 10:"
         " https://docs.python.org/3/library/logging.html"
     ),
 )
+def main(log_level):
+    config_log(log_level)
+
+
+@main.command(help="Start a HTTP_SD server for Prometheus.")
+@click.option(
+    "--host", "-h", default="127.0.0.1", help="The interface to bind to."
+)
+@click.option("--port", "-p", default=8080, help="The port to bind to.")
 @click.argument(
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
-def main(host, port, log_level, root_dir):
-    config_log(log_level)
+def serve(host, port, root_dir):
     config.root_dir = root_dir
     waitress.serve(app, host=host, port=port)
+
+
+@main.command(help="Run and verify the generators under target directory.")
+@click.argument(
+    "root_dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+)
+def check(root_dir):
+    config.root_dir = root_dir
+    validate(root_dir)
 
 
 if __name__ == "__main__":

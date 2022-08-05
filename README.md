@@ -11,6 +11,8 @@ framework.
 - Support static targets from Json file;
 - Support static targets from Yaml file;
 - Support generating target list using Python script;
+- Support `check` command, to testing the generated target is as expected, and
+  counting the targets.
 
 ## Installation
 
@@ -47,6 +49,19 @@ The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 ```shell
 $ prometheus-http-sd /tmp/good_root
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
+```
+
+### Check and Validate your Targets
+
+You can use `prometheus-http-sd check` command to test your targets dir. It will
+run all of you generators, validate the targets, and print the targets count
+that each generator generates.
+
+```shell
+$ prometheus-http-sd check test/test_generator/root
+[2022-08-06 00:50:11,095] {validate.py:16} INFO - Run generator test/test_generator/root/json/target.json, took 0.0011398792266845703s, generated 1 targets.
+[2022-08-06 00:50:11,100] {validate.py:16} INFO - Run generator test/test_generator/root/yaml/target.yaml, took 0.0043718814849853516s, generated 2 targets.
+[2022-08-06 00:50:11,100] {validate.py:22} INFO - Done! Generated {total_targets} in total.
 ```
 
 ### Script Dependencies
