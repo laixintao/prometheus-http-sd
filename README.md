@@ -15,9 +15,11 @@ framework.
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
 - [Define you targets](#define-you-targets)
+  - [Your target generator](#your-target-generator)
+  - [The Target Path](#the-target-path)
+  - [Overwriting `job_name` labels](#overwriting-job_name-labels)
   - [Check and Validate your Targets](#check-and-validate-your-targets)
   - [Script Dependencies](#script-dependencies)
-- [The Target Path](#the-target-path)
 - [Update Your Scripts](#update-your-scripts)
 - [Best Practice](#best-practice)
 
@@ -51,7 +53,7 @@ generate targets for prometheus-http-sd.
 $ mkdir targets
 ```
 
-In this directory:
+In this directory, every file is called a target "generator":
 
 - Filename that ending with `.json` will be exposed directly
 - Filename that ending with `.yaml` will be exposed directly
@@ -63,6 +65,38 @@ In this directory:
   `generate_targets()`
 - Filename that starts with `.` (hidden file in Linux) will also be ignored
 
+Let write our first target generator by yaml, put this into your
+`targets/first_target.yaml`:
+
+```yaml
+---
+- targets:
+    - "10.1.1.9:9100"
+    - "10.1.1.10:9100"
+  labels:
+    job: node
+    datacenter: nyc
+    group: g1
+- targets:
+    - "10.2.1.9:9100"
+    - "10.2.1.10:9100"
+  labels:
+    job: node
+    datacenter: sg
+    group: g2
+```
+
+If you use json, the data structure is the same, just in Json format.
+
+Let's put another generator using Python:
+
+Put this into your `targets/by_python.py`:
+
+```python
+def generate_targets():
+  return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd"}}
+```
+
 Then you can run `prometheus-http-sd serve -h 0.0.0.0 -p 8080 /tmp/targets`,
 prometheus-http-sd will start to expose targets at: http://0.0.0.0:8080/targets
 
@@ -71,6 +105,16 @@ The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 ```shell
 $ prometheus-http-sd /tmp/good_root
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
+```
+
+Finally, you can tell your Prometheus to find targets under
+http://127.0.0.1:8080/targets, by adding this into your Prometheus config:
+
+```yaml
+scrape_configs:
+  - job_name: "etcd"
+    http_sd_config:
+      url: http://127.0.0.1:8080/targets/
 ```
 
 ### Manage prometheus-http-sd by systemd
@@ -122,29 +166,11 @@ short).
 
 ## Define you targets
 
-### Check and Validate your Targets
+### Your target generator
 
-You can use `prometheus-http-sd check` command to test your targets dir. It will
-run all of you generators, validate the targets, and print the targets count
-that each generator generates.
+Please see the [Usage](#usage) to know how to define your generator.
 
-```shell
-$ prometheus-http-sd check test/test_generator/root
-[2022-08-06 00:50:11,095] {validate.py:16} INFO - Run generator test/test_generator/root/json/target.json, took 0.0011398792266845703s, generated 1 targets.
-[2022-08-06 00:50:11,100] {validate.py:16} INFO - Run generator test/test_generator/root/yaml/target.yaml, took 0.0043718814849853516s, generated 2 targets.
-[2022-08-06 00:50:11,100] {validate.py:22} INFO - Done! Generated {total_targets} in total.
-```
-
-It's a good idea to use `prometheus-http-sd check` in your CI system to validate
-your targets generator scripts and target files.
-
-### Script Dependencies
-
-If you want your scripts to use some other python library, just install them
-into the **same virtualenv** that you install prometheus-http-sd, so that
-prometheus-http-sd can import them.
-
-## The Target Path
+### The Target Path
 
 prometheus-http-sd support sub-pathes.
 
@@ -198,6 +224,53 @@ scrape_configs:
     http_sd_config:
       url: http://prometheus-http-sd:8080/targets/application
 ```
+
+### Overwriting `job_name` labels
+
+You may want to put all of etcd targets in one generator, including port 2379
+for etcd metrics and 9100 for node_exporter metrics of the etcd server. But the
+`job_name` setting was based on per URL.
+
+The trick is that, you can overwrite the `job` label in the target labels, like
+this:
+
+```yaml
+---
+- targets:
+    - "10.1.1.9:9100"
+  labels:
+    job: node
+    datacenter: nyc
+    group: g1
+- targets:
+    - "10.1.1.9:2379"
+  labels:
+    job: etcd
+    datacenter: nyc
+    group: g1
+```
+
+### Check and Validate your Targets
+
+You can use `prometheus-http-sd check` command to test your targets dir. It will
+run all of you generators, validate the targets, and print the targets count
+that each generator generates.
+
+```shell
+$ prometheus-http-sd check test/test_generator/root
+[2022-08-06 00:50:11,095] {validate.py:16} INFO - Run generator test/test_generator/root/json/target.json, took 0.0011398792266845703s, generated 1 targets.
+[2022-08-06 00:50:11,100] {validate.py:16} INFO - Run generator test/test_generator/root/yaml/target.yaml, took 0.0043718814849853516s, generated 2 targets.
+[2022-08-06 00:50:11,100] {validate.py:22} INFO - Done! Generated {total_targets} in total.
+```
+
+It's a good idea to use `prometheus-http-sd check` in your CI system to validate
+your targets generator scripts and target files.
+
+### Script Dependencies
+
+If you want your scripts to use some other python library, just install them
+into the **same virtualenv** that you install prometheus-http-sd, so that
+prometheus-http-sd can import them.
 
 ## Update Your Scripts
 
