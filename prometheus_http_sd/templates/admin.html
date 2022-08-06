@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prometheus HTTP SD Admin</title>
+  </head>
+  <body>
+    <h1>Prometheus HTTP SD Admin</h1>
+    <h2>Targets Pathes</h2>
+    <div>
+      <ul>
+        {% for path in paths %}
+        <li>
+          <a href="{{ prefix }}/targets/{{ path }}"> /targets/{{ path }} </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </body>
+</html>
