@@ -6,6 +6,8 @@
   </head>
   <body>
     <h1>Prometheus HTTP SD Admin</h1>
+    <a href="https://github.com/laixintao/prometheus-http-sd">Documentation</a>
+    <hr />
     <h2>Targets Pathes</h2>
     <div>
       <ul>
@@ -14,6 +16,21 @@
           <a href="{{ prefix }}/targets/{{ path }}"> /targets/{{ path }} </a>
         </li>
         {% endfor %}
+      </ul>
+    </div>
+    <h2>Metrics Path</h2>
+    <p>
+      Prometheus HTTP SD exposes metrics for monitoring itself. Metrics are
+      available under /metrics and {{ prefix }}/metrics (by prefix).
+    </p>
+    <div>
+      <ul>
+        <li>
+          <a href="/metrics"> /metrics </a>
+        </li>
+        <li>
+          <a href="{{ prefix }}/metrics"> {{ prefix }}/metrics </a>
+        </li>
       </ul>
     </div>
   </body>
