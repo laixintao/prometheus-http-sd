@@ -1,0 +1,104 @@
+# HELP python_gc_objects_collected_total Objects collected during gc
+# TYPE python_gc_objects_collected_total counter
+python_gc_objects_collected_total{generation="0"} 482.0
+python_gc_objects_collected_total{generation="1"} 0.0
+python_gc_objects_collected_total{generation="2"} 0.0
+# HELP python_gc_objects_uncollectable_total Uncollectable object found during GC
+# TYPE python_gc_objects_uncollectable_total counter
+python_gc_objects_uncollectable_total{generation="0"} 0.0
+python_gc_objects_uncollectable_total{generation="1"} 0.0
+python_gc_objects_uncollectable_total{generation="2"} 0.0
+# HELP python_gc_collections_total Number of times this generation was collected
+# TYPE python_gc_collections_total counter
+python_gc_collections_total{generation="0"} 79.0
+python_gc_collections_total{generation="1"} 7.0
+python_gc_collections_total{generation="2"} 0.0
+# HELP python_info Python platform information
+# TYPE python_info gauge
+python_info{implementation="CPython",major="3",minor="9",patchlevel="0",version="3.9.0"} 1.0
+# HELP httpsd_generator_requests_total The total count that this generator executed, status can be success/fail
+# TYPE httpsd_generator_requests_total counter
+httpsd_generator_requests_total{generator="test/test_validate/root_dir/bad.yaml",status="success"} 7.0
+httpsd_generator_requests_total{generator="test/test_validate/root_dir/good.yaml",status="success"} 7.0
+# HELP httpsd_generator_requests_created The total count that this generator executed, status can be success/fail
+# TYPE httpsd_generator_requests_created gauge
+httpsd_generator_requests_created{generator="test/test_validate/root_dir/bad.yaml",status="success"} 1.659772343690829e+09
+httpsd_generator_requests_created{generator="test/test_validate/root_dir/good.yaml",status="success"} 1.6597723436915379e+09
+# HELP httpsd_generator_last_generated_targets The target count that this generator gets during its last execution
+# TYPE httpsd_generator_last_generated_targets gauge
+httpsd_generator_last_generated_targets{generator="test/test_validate/root_dir/bad.yaml"} 4.0
+httpsd_generator_last_generated_targets{generator="test/test_validate/root_dir/good.yaml"} 4.0
+# HELP httpsd_generator_run_duration_seconds The time cost that this generator run
+# TYPE httpsd_generator_run_duration_seconds histogram
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.005"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.01"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.025"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.05"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.075"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.1"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.25"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.5"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="0.75"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="1.0"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="2.5"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="5.0"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="7.5"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="10.0"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/bad.yaml",le="+Inf"} 7.0
+httpsd_generator_run_duration_seconds_count{generator="test/test_validate/root_dir/bad.yaml"} 7.0
+httpsd_generator_run_duration_seconds_sum{generator="test/test_validate/root_dir/bad.yaml"} 0.004312008999999506
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.005"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.01"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.025"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.05"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.075"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.1"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.25"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.5"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="0.75"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="1.0"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="2.5"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="5.0"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="7.5"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="10.0"} 7.0
+httpsd_generator_run_duration_seconds_bucket{generator="test/test_validate/root_dir/good.yaml",le="+Inf"} 7.0
+httpsd_generator_run_duration_seconds_count{generator="test/test_validate/root_dir/good.yaml"} 7.0
+httpsd_generator_run_duration_seconds_sum{generator="test/test_validate/root_dir/good.yaml"} 0.002305905000003605
+# HELP httpsd_generator_run_duration_seconds_created The time cost that this generator run
+# TYPE httpsd_generator_run_duration_seconds_created gauge
+httpsd_generator_run_duration_seconds_created{generator="test/test_validate/root_dir/bad.yaml"} 1.659772343689007e+09
+httpsd_generator_run_duration_seconds_created{generator="test/test_validate/root_dir/good.yaml"} 1.6597723436908538e+09
+# HELP httpsd_path_last_generated_targets Generated targets count in last request
+# TYPE httpsd_path_last_generated_targets gauge
+httpsd_path_last_generated_targets{path="test_validate/root_dir"} 8.0
+# HELP httpsd_version_info prometheus_http_sd version info
+# TYPE httpsd_version_info gauge
+httpsd_version_info{version="0.4.1"} 1.0
+# HELP httpsd_path_requests_total The total count of a path being requested, status label can be success/fail
+# TYPE httpsd_path_requests_total counter
+httpsd_path_requests_total{path="test_validate/root_dir",status="success"} 7.0
+# HELP httpsd_path_requests_created The total count of a path being requested, status label can be success/fail
+# TYPE httpsd_path_requests_created gauge
+httpsd_path_requests_created{path="test_validate/root_dir",status="success"} 1.659772343691556e+09
+# HELP httpsd_target_path_request_duration_seconds The bucket of request duration in seconds
+# TYPE httpsd_target_path_request_duration_seconds histogram
+httpsd_target_path_request_duration_seconds_bucket{le="0.005",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.01",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.025",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.05",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.075",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.1",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.25",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.5",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="0.75",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="1.0",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="2.5",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="5.0",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="7.5",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="10.0",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_bucket{le="+Inf",path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_count{path="test_validate/root_dir"} 7.0
+httpsd_target_path_request_duration_seconds_sum{path="test_validate/root_dir"} 0.009562472999999017
+# HELP httpsd_target_path_request_duration_seconds_created The bucket of request duration in seconds
+# TYPE httpsd_target_path_request_duration_seconds_created gauge
+httpsd_target_path_request_duration_seconds_created{path="test_validate/root_dir"} 1.659772343688767e+09
