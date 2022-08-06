@@ -11,6 +11,7 @@ framework.
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Manage prometheus-http-sd by systemd](#manage-prometheus-http-sd-by-systemd)
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
 - [Define you targets](#define-you-targets)
@@ -28,7 +29,12 @@ framework.
 - Support static targets from Yaml file;
 - Support generating target list using Python script;
 - Support `check` command, to testing the generated target is as expected, and
-  counting the targets.
+  counting the targets;
+- You can monitoring your target generator via `/metrics`, see
+  [metrics](./docs/metrics.txt);
+- Admin page to list all target paths;
+- Auto reload when generator or targets changed;
+- Support managing targets in a hierarchy way;
 
 ## Installation
 
@@ -65,6 +71,32 @@ The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 ```shell
 $ prometheus-http-sd /tmp/good_root
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
+```
+
+### Manage prometheus-http-sd by systemd
+
+Just put this file under `/lib/systemd/system/http-sd.service` (remember to
+change your installation path and root_dir path):
+
+```
+# /lib/systemd/system/http-sd.service
+[Unit]
+Description=Prometheus HTTP SD Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/httpsd_env/bin/prometheus-http-sd serve \
+    -h 0.0.0.0                                         \
+    -p 8080                                            \
+    /opt/httpsd_targets
+
+Restart=always
+RestartSec=90
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ### Admin Page
