@@ -1,16 +1,17 @@
 import pytest
-from prometheus_http_sd.app import app as global_app
+from prometheus_http_sd.app import create_app
 
 
 @pytest.fixture()
 def app():
-    global_app.config.update(
+    app = create_app("/")
+    app.config.update(
         {
             "TESTING": True,
         }
     )
 
-    yield global_app
+    yield app
 
 
 @pytest.fixture()
