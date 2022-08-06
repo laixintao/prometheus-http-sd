@@ -43,7 +43,7 @@ def main(log_level):
     default="/",
     help=(
         "The global url prefix, if set to /foo, then /targets will be"
-        " avaialble under /foo/targets"
+        " available under /foo/targets"
     ),
 )
 @click.argument(
