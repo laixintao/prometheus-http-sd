@@ -1,39 +1,18 @@
+import os
 import logging
-import sys
+from pathlib import Path
 
-import click
-import waitress
 
-from flask import Flask, jsonify, abort
+from flask import Flask, jsonify, abort, render_template
 from .sd import generate
-from .config import config
 from .version import VERSION
-from .validate import validate
+from .config import config
 from prometheus_client import Gauge, Counter, Histogram, Info
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from prometheus_client import make_wsgi_app
 
 
-def config_log(level):
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-    logging.basicConfig(
-        level=level,
-        format=(
-            "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s -"
-            " %(message)s"
-        ),
-        handlers=[stdout_handler],
-    )
-
-
 logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-
-# Add prometheus wsgi middleware to route /metrics requests
-app.wsgi_app = DispatcherMiddleware(
-    app.wsgi_app, {"/metrics": make_wsgi_app()}
-)
 
 
 path_last_generated_targets = Gauge(
@@ -59,74 +38,63 @@ target_path_request_duration_seconds = Histogram(
 )
 
 
-@app.route("/targets", defaults={"rest_path": ""})
-@app.route("/targets/", defaults={"rest_path": ""})
-# match the rest of the path
-@app.route("/targets/<path:rest_path>")
-def get_targets(rest_path):
-    logger.info("request target path: {}".format(rest_path))
-    with target_path_request_duration_seconds.labels(path=rest_path).time():
-        try:
-            targets = generate(config.root_dir, rest_path)
-        except FileNotFoundError:
-            abort(404)
-        except:  # noqa: E722
-            target_path_requests_total.labels(
-                path=rest_path, status="fail"
-            ).inc()
-            raise
-        else:
-            target_path_requests_total.labels(
-                path=rest_path, status="success"
-            ).inc()
-            path_last_generated_targets.labels(path=rest_path).set(
-                sum(len(t.get("targets", [])) for t in targets)
+def create_app(prefix):
+    app = Flask(
+        __name__,
+        template_folder=str(Path(__file__).parent / "templates"),
+    )
+
+    # Add prometheus wsgi middleware to route /metrics requests
+    prometheus_wsgi_app = make_wsgi_app()
+    app.wsgi_app = DispatcherMiddleware(
+        app.wsgi_app,
+        {
+            "/metrics": prometheus_wsgi_app,
+            f"{prefix}/metrics": prometheus_wsgi_app,
+        },
+    )
+
+    @app.route(f"{prefix}/targets", defaults={"rest_path": ""})
+    @app.route(f"{prefix}/targets/", defaults={"rest_path": ""})
+    # match the rest of the path
+    @app.route(f"{prefix}/targets/<path:rest_path>")
+    def get_targets(rest_path):
+        logger.info("request target path: {}".format(rest_path))
+        with target_path_request_duration_seconds.labels(
+            path=rest_path
+        ).time():
+            try:
+                targets = generate(config.root_dir, rest_path)
+            except FileNotFoundError:
+                logger.error(f"Didn't found {config.root_dir}/{rest_path}!")
+                abort(404)
+            except:  # noqa: E722
+                target_path_requests_total.labels(
+                    path=rest_path, status="fail"
+                ).inc()
+                raise
+            else:
+                target_path_requests_total.labels(
+                    path=rest_path, status="success"
+                ).inc()
+                path_last_generated_targets.labels(path=rest_path).set(
+                    sum(len(t.get("targets", [])) for t in targets)
+                )
+
+                return jsonify(targets)
+
+    @app.route(f"{prefix}/")
+    def admin():
+        paths = sorted(
+            list(
+                set(
+                    [
+                        dirpath.removeprefix(config.root_dir)
+                        for dirpath, _, _ in os.walk(config.root_dir)
+                    ]
+                )
             )
+        )
+        return render_template("admin.html", prefix=prefix, paths=paths)
 
-            return jsonify(targets)
-
-
-@app.route("/")
-def admin():
-    return ""
-
-
-@click.group()
-@click.option(
-    "--log-level",
-    default=20,
-    help=(
-        "Python logging level, default 20, can set from 0 to 50, step 10:"
-        " https://docs.python.org/3/library/logging.html"
-    ),
-)
-def main(log_level):
-    config_log(log_level)
-
-
-@main.command(help="Start a HTTP_SD server for Prometheus.")
-@click.option(
-    "--host", "-h", default="127.0.0.1", help="The interface to bind to."
-)
-@click.option("--port", "-p", default=8080, help="The port to bind to.")
-@click.argument(
-    "root_dir",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-)
-def serve(host, port, root_dir):
-    config.root_dir = root_dir
-    waitress.serve(app, host=host, port=port)
-
-
-@main.command(help="Run and verify the generators under target directory.")
-@click.argument(
-    "root_dir",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-)
-def check(root_dir):
-    config.root_dir = root_dir
-    validate(root_dir)
-
-
-if __name__ == "__main__":
-    main()
+    return app

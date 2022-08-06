@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prometheus HTTP SD Admin</title>
+  </head>
+  <body>
+    <h1>Prometheus HTTP SD Admin</h1>
+    <a href="https://github.com/laixintao/prometheus-http-sd">Documentation</a>
+    <hr />
+    <h2>Targets Paths</h2>
+    <div>
+      <ul>
+        {% for path in paths %}
+        <li>
+          <a href="{{ prefix }}/targets/{{ path }}"> /targets/{{ path }} </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <h2>Metrics Path</h2>
+    {% if prefix != "/" %}
+    <p>
+      Prometheus HTTP SD exposes metrics for monitoring itself. Metrics are
+      available under /metrics and {{ prefix }}/metrics (by prefix).
+    </p>
+    {% endif %}
+    <div>
+      <ul>
+        <li>
+          <a href="/metrics"> /metrics </a>
+        </li>
+        {% if prefix != "/" %}
+        <li>
+          <a href="{{ prefix }}/metrics"> {{ prefix }}/metrics </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </body>
+</html>
