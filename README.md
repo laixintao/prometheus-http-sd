@@ -148,7 +148,7 @@ WantedBy=multi-user.target
 You can open the root path, `http://127.0.0.1:8080/` in this example, and you
 will see all of the available paths list in the admin page.
 
-![](./docs/admin.png)
+![](./docs/admin1.png)
 
 ### Serve under a different root path
 
