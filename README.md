@@ -6,6 +6,22 @@ framework.
 
 [![Test](https://github.com/laixintao/prometheus-http-sd/actions/workflows/test.yaml/badge.svg)](https://github.com/laixintao/prometheus-http-sd/actions/workflows/test.yaml)
 
+<!-- vim-markdown-toc GFM -->
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Admin Page](#admin-page)
+  - [Serve under a different root path](#serve-under-a-different-root-path)
+- [Define you targets](#define-you-targets)
+  - [Check and Validate your Targets](#check-and-validate-your-targets)
+  - [Script Dependencies](#script-dependencies)
+- [The Target Path](#the-target-path)
+- [Update Your Scripts](#update-your-scripts)
+- [Best Practice](#best-practice)
+
+<!-- vim-markdown-toc -->
+
 ## Features
 
 - Support static targets from Json file;
@@ -41,7 +57,7 @@ In this directory:
   `generate_targets()`
 - Filename that starts with `.` (hidden file in Linux) will also be ignored
 
-Then you can run `prometheus-http-sd -h 0.0.0.0 -p 8080 /tmp/targets`,
+Then you can run `prometheus-http-sd serve -h 0.0.0.0 -p 8080 /tmp/targets`,
 prometheus-http-sd will start to expose targets at: http://0.0.0.0:8080/targets
 
 The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
@@ -50,6 +66,29 @@ The `-h` and `-p` is optional, defaults to `127.0.0.1` and `8080`.
 $ prometheus-http-sd /tmp/good_root
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
 ```
+
+### Admin Page
+
+You can open the root path, `http://127.0.0.1:8080/` in this example, and you
+will see all of the available paths list in the admin page.
+
+![](./docs/admin.png)
+
+### Serve under a different root path
+
+If you put prometheus-http-sd behind a reverse proxy like Nginx, like this:
+
+```
+location /http_sd/ {
+      proxy_pass http://prometheus_http_sd;
+}
+```
+
+Then you need to tell prometheus_http_sd to serve all HTTP requests under this
+path, by using the `--url_prefix /http_sd` cli option, (or `-r /http_sd` for
+short).
+
+## Define you targets
 
 ### Check and Validate your Targets
 
@@ -77,8 +116,8 @@ prometheus-http-sd can import them.
 
 prometheus-http-sd support sub-pathes.
 
-For example, if we use `export PROMETHEUS_HTTP_SD_DIR=gateway`, and the
-`gateway` directory's structure is as follows:
+For example, if we use `prometheus-http-sd serve gateway`, and the `gateway`
+directory's structure is as follows:
 
 ```shell
 gateway
@@ -102,7 +141,7 @@ This is very useful when you use vertical scaling. Say you have 5 Prometheus
 instances, and you want each one of them scrape for different targets, then you
 can use the sub-path feature of prometheus-http-sd.
 
-For example, in one Prometheus's config:
+For example, in one Prometheus's scrape config:
 
 ```yaml
 scrape_configs:
