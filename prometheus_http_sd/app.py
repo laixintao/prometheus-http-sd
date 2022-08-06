@@ -85,16 +85,19 @@ def create_app(prefix):
 
     @app.route(f"{prefix}/")
     def admin():
-        paths = sorted(
-            list(
-                set(
-                    [
-                        dirpath.removeprefix(config.root_dir)
-                        for dirpath, _, _ in os.walk(config.root_dir)
-                    ]
-                )
+        paths = []
+
+        for dirpath, _, _ in os.walk(config.root_dir):
+            should_ignore_underscore = any(
+                p.startswith("_")
+                for p in os.path.normpath(dirpath).split(os.sep)
             )
-        )
+            if should_ignore_underscore:
+                continue
+
+            paths.append(dirpath.removeprefix(config.root_dir))
+
+        paths = sorted(list(set(paths)))
         return render_template("admin.html", prefix=prefix, paths=paths)
 
     return app
