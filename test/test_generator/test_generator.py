@@ -41,3 +41,8 @@ def test_parse_yaml():
 def test_non_exist():
     with pytest.raises(FileNotFoundError):
         generate(root, "non-exist")
+
+
+def test_empty():
+    targets = generate(root, "empty")
+    assert targets == []
