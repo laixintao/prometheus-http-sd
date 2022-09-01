@@ -14,7 +14,6 @@ def validate(root_dir):
 
     by_generator = {}
     for generator in generators:
-        print(generator)
         start = time.time()
         target_list = run_generator(generator)
         all_good = True
