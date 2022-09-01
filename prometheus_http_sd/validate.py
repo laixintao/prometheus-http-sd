@@ -12,7 +12,9 @@ def validate(root_dir):
     total_targets = 0
     exit_0 = True
 
+    by_generator = {}
     for generator in generators:
+        print(generator)
         start = time.time()
         target_list = run_generator(generator)
         all_good = True
@@ -30,11 +32,14 @@ def validate(root_dir):
             f"{status} run generator {generator}, took {end-start}s, generated"
             f" {count} targets."
         )
+        by_generator[str(generator)] = count
         total_targets += count
 
     logger.info(f"Done! Generated {total_targets} targets in total.")
+
+    by_generator["_total"] = total_targets
     if exit_0:
-        sys.exit(0)
+        return by_generator
     sys.exit(1)
 
 
