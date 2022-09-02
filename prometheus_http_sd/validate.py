@@ -61,4 +61,8 @@ def check_content(target):
         if not isinstance(labels, dict):
             logger.warning(f"`labels` key in {target} is not a dict.")
             return False
+        for k, v in labels.items():
+            if  not isinstance(k, str) or not isinstance(v, str):
+                logger.warning(f"label pair {k}:{v} is not string.")
+                return False
     return True
