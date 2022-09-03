@@ -62,7 +62,7 @@ def serve(host, port, url_prefix, root_dir):
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
 def check(root_dir):
-    config.root_dir = root_dir
+    config.root_dir = root_dir.rstrip("/")
     validate(root_dir)
 
 
