@@ -37,10 +37,8 @@ def test_label_notdict():
         }
     )
 
+
 def test_label_no_bool():
     assert not check_content(
-        {
-            "targets": ["10.0.0.1:123"],
-            "labels": {"abc": False}
-        }
+        {"targets": ["10.0.0.1:123"], "labels": {"abc": False}}
     )
