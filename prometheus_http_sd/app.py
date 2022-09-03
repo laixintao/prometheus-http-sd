@@ -94,8 +94,8 @@ def create_app(prefix):
             )
             if should_ignore_underscore:
                 continue
-
-            paths.append(dirpath.removeprefix(config.root_dir))
+            dirpath.removeprefix("/")
+            paths.append(dirpath)
 
         paths = sorted(list(set(paths)))
         return render_template("admin.html", prefix=prefix, paths=paths)
