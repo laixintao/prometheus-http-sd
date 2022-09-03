@@ -95,8 +95,8 @@ def create_app(prefix):
             if should_ignore_underscore:
                 continue
 
-            dirpath.removeprefix(config.root_dir)
-            dirpath.removeprefix("/")
+            dirpath = dirpath.removeprefix(config.root_dir)
+            dirpath = dirpath.removeprefix("/")
             paths.append(dirpath)
 
         paths = sorted(list(set(paths)))
