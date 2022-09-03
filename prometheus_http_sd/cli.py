@@ -40,7 +40,7 @@ def main(log_level):
 @click.option(
     "--url_prefix",
     "-r",
-    default="/",
+    default="",
     help=(
         "The global url prefix, if set to /foo, then /targets will be"
         " available under /foo/targets"
