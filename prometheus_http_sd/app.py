@@ -100,6 +100,8 @@ def create_app(prefix):
             paths.append(dirpath)
 
         paths = sorted(list(set(paths)))
-        return render_template("admin.html", prefix=prefix, paths=paths)
+        return render_template(
+            "admin.html", prefix=prefix, paths=paths, version=VERSION
+        )
 
     return app

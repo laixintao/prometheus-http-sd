@@ -6,14 +6,21 @@
   </head>
   <body>
     <h1>Prometheus HTTP SD Admin</h1>
-    <a href="https://github.com/laixintao/prometheus-http-sd">Documentation</a>
+    <p>
+      <a href="https://github.com/laixintao/prometheus-http-sd"
+        >Documentation</a
+      >
+      <a href="https://pypi.org/project/prometheus-http-sd/{{ version }}/"
+        >HTTP SD Version: {{ version }}</a
+      >
+    </p>
     <hr />
     <h2>Targets Paths</h2>
     <div>
       <ul>
         {% for path in paths %}
         <li>
-          <a href="{{ prefix }}/targets/{{ path }}"> /targets/{{ path }} </a>
+          <a href="targets/{{ path }}"> /targets/{{ path }} </a>
         </li>
         {% endfor %}
       </ul>
