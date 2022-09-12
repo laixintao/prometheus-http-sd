@@ -19,7 +19,7 @@
       </ul>
     </div>
     <h2>Metrics Path</h2>
-    {% if prefix != "/" %}
+    {% if prefix != "" %}
     <p>
       Prometheus HTTP SD exposes metrics for monitoring itself. Metrics are
       available under /metrics and {{ prefix }}/metrics (by prefix).

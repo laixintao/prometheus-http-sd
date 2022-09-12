@@ -38,6 +38,10 @@ def main(log_level):
 )
 @click.option("--port", "-p", default=8080, help="The port to bind to.")
 @click.option(
+    "--connection-limit", "-c", default=1000, help="Server connection limit"
+)
+@click.option("--threads", "-t", default=64, help="Server threads")
+@click.option(
     "--url_prefix",
     "-r",
     default="",
@@ -50,10 +54,16 @@ def main(log_level):
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
-def serve(host, port, url_prefix, root_dir):
+def serve(host, port, connection_limit, threads, url_prefix, root_dir):
     config.root_dir = root_dir
     app = create_app(url_prefix)
-    waitress.serve(app, host=host, port=port)
+    waitress.serve(
+        app,
+        host=host,
+        port=port,
+        connection_limit=connection_limit,
+        threads=threads,
+    )
 
 
 @main.command(help="Run and verify the generators under target directory.")
