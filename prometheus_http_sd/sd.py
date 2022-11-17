@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import importlib
+import pathlib
 import importlib.machinery
 
 import importlib.util
@@ -39,7 +40,32 @@ generator_run_duration_seconds = Histogram(
 )
 
 
-def get_generator_list(root: str, path: str = "") -> List[str]:
+def should_ignore(file, full_path, ignore_dirs):
+    logger.info(f"{file=}")
+    if ignore_dirs:
+        for ignore in ignore_dirs:
+            if full_path.startswith(ignore):
+                logger.warning(
+                    f"{full_path} is ignored due to match ignore"
+                    f" pattern {ignore}"
+                )
+                return True
+
+    should_ignore_underscore = any(
+        p.startswith("_") for p in os.path.normpath(full_path).split(os.sep)
+    )
+    if should_ignore_underscore:
+        return True
+
+    should_ignore_hidden = file.startswith(".")
+    if should_ignore_hidden:
+        return True
+    return False
+
+
+def get_generator_list(
+    root: str, path: str = "", ignore_dirs=None
+) -> List[str]:
     """
     generate targets start from ``path``
     if ``path`` is None or empty, then start from the root path
@@ -58,13 +84,7 @@ def get_generator_list(root: str, path: str = "") -> List[str]:
         for file in files:
             full_path = os.path.join(root, file)
 
-            logger.debug(f"{full_path=}")
-            should_ignore_underscore = any(
-                p.startswith("_")
-                for p in os.path.normpath(full_path).split(os.sep)
-            )
-            should_ignore_hidden = file.startswith(".")
-            if should_ignore_hidden or should_ignore_underscore:
+            if should_ignore(file, full_path, ignore_dirs):
                 continue
 
             generators.append(full_path)
