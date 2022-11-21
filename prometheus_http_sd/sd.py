@@ -119,14 +119,22 @@ def run_generator(generator_path: str) -> TargetList:
     with generator_run_duration_seconds.labels(
         generator=generator_path
     ).time():
-        result = executor(generator_path)
+        try:
+            result = executor(generator_path)
+        except:
+            generator_requests_total.labels(
+                generator=generator_path, status="fail"
+            ).inc()
+            raise
+        else:
+            generator_requests_total.labels(
+                generator=generator_path, status="success"
+            ).inc()
+
         generator_last_generated_targets.labels(generator=generator_path).set(
             sum(len(t.get("targets", [])) for t in result)
         )
 
-    generator_requests_total.labels(
-        generator=generator_path, status="success"
-    ).inc()
     return result
 
 
