@@ -121,7 +121,7 @@ def run_generator(generator_path: str) -> TargetList:
     ).time():
         try:
             result = executor(generator_path)
-        except:
+        except:  # noqa: E722
             generator_requests_total.labels(
                 generator=generator_path, status="fail"
             ).inc()
