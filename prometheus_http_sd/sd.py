@@ -2,7 +2,6 @@ import os
 import json
 import logging
 import importlib
-import pathlib
 import importlib.machinery
 
 import importlib.util
