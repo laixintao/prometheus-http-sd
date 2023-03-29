@@ -1,14 +1,17 @@
+import os
 import sys
 import time
 import logging
+
+from .const import TEST_ENV_NAME
 from .sd import get_generator_list, run_generator
 
 logger = logging.getLogger("checker")
 
 
-def validate(root_dir, ignore_dirs=None):
-    logger.info(f"validate dir, {ignore_dirs=}")
-    generators = get_generator_list(root_dir, ignore_dirs=ignore_dirs)
+def validate(root_dir):
+    os.environ[TEST_ENV_NAME] = "1"
+    generators = get_generator_list(root_dir)
 
     total_targets = 0
     exit_0 = True

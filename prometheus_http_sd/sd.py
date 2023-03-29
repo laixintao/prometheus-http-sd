@@ -9,6 +9,7 @@ from pathlib import Path
 
 from typing import List
 from .targets import TargetList
+from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
 
 import yaml
@@ -39,32 +40,7 @@ generator_run_duration_seconds = Histogram(
 )
 
 
-def should_ignore(file, full_path, ignore_dirs):
-    logger.info(f"{file=}")
-    if ignore_dirs:
-        for ignore in ignore_dirs:
-            if full_path.startswith(ignore):
-                logger.warning(
-                    f"{full_path} is ignored due to match ignore"
-                    f" pattern {ignore}"
-                )
-                return True
-
-    should_ignore_underscore = any(
-        p.startswith("_") for p in os.path.normpath(full_path).split(os.sep)
-    )
-    if should_ignore_underscore:
-        return True
-
-    should_ignore_hidden = file.startswith(".")
-    if should_ignore_hidden:
-        return True
-    return False
-
-
-def get_generator_list(
-    root: str, path: str = "", ignore_dirs=None
-) -> List[str]:
+def get_generator_list(root: str, path: str = "") -> List[str]:
     """
     generate targets start from ``path``
     if ``path`` is None or empty, then start from the root path
@@ -83,7 +59,12 @@ def get_generator_list(
         for file in files:
             full_path = os.path.join(root, file)
 
-            if should_ignore(file, full_path, ignore_dirs):
+            logger.debug(f"{full_path=}")
+            should_ignore_underscore = any(
+                p.startswith("_") for p in os.path.normpath(full_path).split(os.sep)
+            )
+            should_ignore_hidden = file.startswith(".")
+            if should_ignore_hidden or should_ignore_underscore:
                 continue
 
             generators.append(full_path)
@@ -92,17 +73,17 @@ def get_generator_list(
     return generators
 
 
-def generate(root: str, path: str = "", **extra_args) -> TargetList:
+def generate(root: str, path: str = "") -> TargetList:
     generators = get_generator_list(root, path)
     all_targets = []
     for generator in generators:
-        target_list = run_generator(generator, **extra_args)
+        target_list = run_generator(generator)
         all_targets.extend(target_list)
 
     return all_targets
 
 
-def run_generator(generator_path: str, **extra_args) -> TargetList:
+def run_generator(generator_path: str) -> TargetList:
     if generator_path.endswith(".json"):
         executor = run_json
     elif generator_path.endswith(".py"):
@@ -110,30 +91,16 @@ def run_generator(generator_path: str, **extra_args) -> TargetList:
     elif generator_path.endswith(".yaml"):
         executor = run_yaml
     else:
-        generator_requests_total.labels(
-            generator=generator_path, status="fail"
-        ).inc()
+        generator_requests_total.labels(generator=generator_path, status="fail").inc()
         raise Exception(f"Unknown File Type: {generator_path}")
 
-    with generator_run_duration_seconds.labels(
-        generator=generator_path
-    ).time():
-        try:
-            result = executor(generator_path, **extra_args)
-        except:  # noqa: E722
-            generator_requests_total.labels(
-                generator=generator_path, status="fail"
-            ).inc()
-            raise
-        else:
-            generator_requests_total.labels(
-                generator=generator_path, status="success"
-            ).inc()
-
+    with generator_run_duration_seconds.labels(generator=generator_path).time():
+        result = executor(generator_path)
         generator_last_generated_targets.labels(generator=generator_path).set(
             sum(len(t.get("targets", [])) for t in result)
         )
 
+    generator_requests_total.labels(generator=generator_path, status="success").inc()
     return result
 
 
@@ -142,7 +109,7 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
-def run_python(generator_path, **extra_args) -> TargetList:
+def run_python(generator_path) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
     loader = importlib.machinery.SourceFileLoader("mymodule", generator_path)
@@ -153,7 +120,11 @@ def run_python(generator_path, **extra_args) -> TargetList:
     else:
         raise Exception("Load a None module!")
 
-    return mymodule.generate_targets(**extra_args)
+    func = getattr(mymodule, "generate_targets")
+
+    if os.getenv(TEST_ENV_NAME) == "1":
+        func = getattr(mymodule, "test_generate_targets")
+    return func()
 
 
 def run_yaml(file_path: str):
