@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 
-from flask import Flask, jsonify, abort, render_template
+from flask import Flask, jsonify, abort, render_template, request
 from .sd import generate
 from .version import VERSION
 from .config import config
@@ -59,12 +59,14 @@ def create_app(prefix):
     # match the rest of the path
     @app.route(f"{prefix}/targets/<path:rest_path>")
     def get_targets(rest_path):
-        logger.info("request target path: {}".format(rest_path))
+        logger.info("request target path: {} with parameters: {}".format(
+            rest_path, request.args,
+        ))
         with target_path_request_duration_seconds.labels(
             path=rest_path
         ).time():
             try:
-                targets = generate(config.root_dir, rest_path)
+                targets = generate(config.root_dir, rest_path, **request.args)
             except FileNotFoundError:
                 logger.error(f"Didn't found {config.root_dir}/{rest_path}!")
                 abort(404)

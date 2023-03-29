@@ -92,17 +92,17 @@ def get_generator_list(
     return generators
 
 
-def generate(root: str, path: str = "") -> TargetList:
+def generate(root: str, path: str = "", **extra_args) -> TargetList:
     generators = get_generator_list(root, path)
     all_targets = []
     for generator in generators:
-        target_list = run_generator(generator)
+        target_list = run_generator(generator, **extra_args)
         all_targets.extend(target_list)
 
     return all_targets
 
 
-def run_generator(generator_path: str) -> TargetList:
+def run_generator(generator_path: str, **extra_args) -> TargetList:
     if generator_path.endswith(".json"):
         executor = run_json
     elif generator_path.endswith(".py"):
@@ -119,7 +119,7 @@ def run_generator(generator_path: str) -> TargetList:
         generator=generator_path
     ).time():
         try:
-            result = executor(generator_path)
+            result = executor(generator_path, **extra_args)
         except:  # noqa: E722
             generator_requests_total.labels(
                 generator=generator_path, status="fail"
@@ -142,7 +142,7 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
-def run_python(generator_path) -> TargetList:
+def run_python(generator_path, **extra_args) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
     loader = importlib.machinery.SourceFileLoader("mymodule", generator_path)
@@ -153,7 +153,7 @@ def run_python(generator_path) -> TargetList:
     else:
         raise Exception("Load a None module!")
 
-    return mymodule.generate_targets()
+    return mymodule.generate_targets(**extra_args)
 
 
 def run_yaml(file_path: str):
