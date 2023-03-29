@@ -17,11 +17,10 @@ def test_app_target_with_parameters(client):
 
     response = client.get("/targets/echo_target?domain=example.com&info=test")
     assert response.status_code == 200
-    body = json.loads(response.data.decode('utf-8'))
-    assert body == [{
-        "labels": {
-            "domain": "example.com",
-            "info": "test"
-        },
-        "targets": ["127.0.0.1:8080"],
-    }]
+    body = json.loads(response.data.decode("utf-8"))
+    assert body == [
+        {
+            "labels": {"domain": "example.com", "info": "test"},
+            "targets": ["127.0.0.1:8080"],
+        }
+    ]

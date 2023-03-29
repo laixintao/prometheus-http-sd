@@ -59,9 +59,12 @@ def create_app(prefix):
     # match the rest of the path
     @app.route(f"{prefix}/targets/<path:rest_path>")
     def get_targets(rest_path):
-        logger.info("request target path: {} with parameters: {}".format(
-            rest_path, request.args,
-        ))
+        logger.info(
+            "request target path: {} with parameters: {}".format(
+                rest_path,
+                request.args,
+            )
+        )
         with target_path_request_duration_seconds.labels(
             path=rest_path
         ).time():
