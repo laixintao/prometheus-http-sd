@@ -8,6 +8,7 @@ def test_target_non_exist_should_404(client):
     resp = client.get("/targets/no-exist")
     assert resp.status_code == 404
 
+
 def test_app_target_with_parameters(client):
     from prometheus_http_sd.config import config
     import json
