@@ -11,6 +11,7 @@ framework.
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [The Python Target Generator](#the-python-target-generator)
   - [Manage prometheus-http-sd by systemd](#manage-prometheus-http-sd-by-systemd)
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
@@ -88,6 +89,8 @@ Let write our first target generator by yaml, put this into your
 
 If you use json, the data structure is the same, just in Json format.
 
+### The Python Target Generator
+
 Let's put another generator using Python:
 
 Put this into your `targets/by_python.py`:
@@ -107,6 +110,12 @@ $ prometheus-http-sd serve /tmp/targets # replace this to your target path
 [2022-07-24 00:52:03,896] {wasyncore.py:486} INFO - Serving on http://127.0.0.1:8080
 ```
 
+If you run `curl http://127.0.0.1:8080/targets` you will get:
+
+```shell
+{"targets": "10.1.1.22:2379", "labels": {"app": "etcd"}}
+```
+
 Finally, you can tell your Prometheus to find targets under
 http://127.0.0.1:8080/targets, by adding this into your Prometheus config:
 
@@ -115,6 +124,23 @@ scrape_configs:
   - job_name: "etcd"
     http_sd_config:
       url: http://127.0.0.1:8080/targets/
+```
+
+The Python target generator also support URL query params. You can check the
+params in your `generate_targets()` function.
+
+For example:
+
+```python
+def generate_targets(**params):
+  cluster = params.get("cluster")
+  return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd", "cluster": cluster}}
+```
+
+Then `curl http://127.0.0.1:8080/targets?cluster=us1` you will get:
+
+```shell
+{"targets": "10.1.1.22:2379", "labels": {"app": "etcd", "cluster": "us1"}}
 ```
 
 ### Manage prometheus-http-sd by systemd
