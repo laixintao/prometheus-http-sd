@@ -71,9 +71,15 @@ def serve(host, port, connection_limit, threads, url_prefix, root_dir):
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
-def check(root_dir):
+@click.option(
+    "--ignore-path",
+    "-i",
+    multiple=True,
+    help="Don't check this dir, starts with the same location as root",
+)
+def check(root_dir, ignore_path):
     config.root_dir = root_dir.rstrip("/")
-    validate(root_dir)
+    validate(root_dir, ignore_dirs=ignore_path)
 
 
 if __name__ == "__main__":
