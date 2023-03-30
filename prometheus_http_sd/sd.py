@@ -9,6 +9,7 @@ from pathlib import Path
 
 from typing import List
 from .targets import TargetList
+from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
 
 import yaml
@@ -152,8 +153,11 @@ def run_python(generator_path, **extra_args) -> TargetList:
         loader.exec_module(mymodule)
     else:
         raise Exception("Load a None module!")
+    func = getattr(mymodule, "generate_targets")
 
-    return mymodule.generate_targets(**extra_args)
+    if os.getenv(TEST_ENV_NAME) == "1":
+        func = getattr(mymodule, "test_generate_targets")
+    return func(**extra_args)
 
 
 def run_yaml(file_path: str):

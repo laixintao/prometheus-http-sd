@@ -1,4 +1,14 @@
 from prometheus_http_sd.validate import check_content
+from prometheus_http_sd.validate import validate
+
+from pathlib import Path
+
+
+def test_run_test_generate_method():
+    result = validate(
+        Path(__file__).parent / "root_dir" / "py_should_run_test_func"
+    )
+    assert result["_total"] == 1
 
 
 def test_no_port():

@@ -292,6 +292,12 @@ $ prometheus-http-sd check test/test_generator/root
 It's a good idea to use `prometheus-http-sd check` in your CI system to validate
 your targets generator scripts and target files.
 
+For Python script, `prometheus-http-sd check` command will run `generate_targets`
+in each script, without any params. However, you can overwrite the `check` logic
+by providing a function called `test_generate_targets()`(without any function
+args), then `check` will run `test_generate_targets` instead. (So you can call
+`generate_targets(foo="bar")` to set the test logic of your own.
+
 ### Script Dependencies
 
 If you want your scripts to use some other python library, just install them
