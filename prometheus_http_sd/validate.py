@@ -9,9 +9,9 @@ from .sd import get_generator_list, run_generator
 logger = logging.getLogger("checker")
 
 
-def validate(root_dir):
+def validate(root_dir, ignore_dirs=None):
     os.environ[TEST_ENV_NAME] = "1"
-    generators = get_generator_list(root_dir)
+    generators = get_generator_list(root_dir, ignore_dirs=ignore_dirs)
 
     total_targets = 0
     exit_0 = True
