@@ -156,7 +156,12 @@ def run_python(generator_path, **extra_args) -> TargetList:
     func = getattr(mymodule, "generate_targets")
 
     if os.getenv(TEST_ENV_NAME) == "1":
-        func = getattr(mymodule, "test_generate_targets")
+        try:
+            test_func = getattr(mymodule, "test_generate_targets")
+        except AttributeError:
+            pass
+        else:
+            func = test_func
     return func(**extra_args)
 
 
