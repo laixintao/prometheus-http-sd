@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import threading
 import importlib
 import importlib.machinery
 
@@ -143,6 +144,46 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
+def timeout_decorator(timeout=None):
+    thread_cache = {}
+    lock = threading.Lock()
+
+    def decorator(function):
+        def wrapper(*arg, **kwargs):
+            cache = {
+                "thread": None,
+                "error": None,
+                "response": None,
+            }
+
+            def target_function():
+                try:
+                    cache["response"] = function(*arg, **kwargs)
+                except Exception as e:
+                    cache["error"] = e
+
+            with lock:
+                key = hash(tuple([hash(arg), tuple(sorted(kwargs.items()))]))
+                if key in thread_cache:
+                    if thread_cache[key]["thread"].is_alive():
+                        cache = thread_cache[key]
+                if cache["thread"] is None:
+                    cache["thread"] = threading.Thread(target=target_function)
+                    cache["thread"].start()
+                thread_cache[key] = cache
+            cache["thread"].join(timeout)
+            if cache["thread"].is_alive():
+                raise Exception("target function timeout!")
+            if cache["error"] is not None:
+                raise cache["error"]
+            return cache["response"]
+
+        return wrapper
+
+    return decorator
+
+
+@timeout_decorator(timeout=60)
 def run_python(generator_path, **extra_args) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
