@@ -1,9 +1,32 @@
 import time
 import heapq
-import logging
 import threading
 
-logger = logging.getLogger(__name__)
+from prometheus_client import Gauge, Counter, Histogram
+
+_collected_total = Counter(
+    "garbage_collection_collected_items",
+    "The total count of the garbage collection collected items.",
+    ["name"],
+)
+
+_thread_cache_count = Gauge(
+    "garbage_collection_cache_count",
+    "Show current thread_cache count",
+    ["name"],
+)
+
+_heap_cache_count = Gauge(
+    "garbage_collection_heap_count",
+    "Show current heap length",
+    ["name"],
+)
+
+_collection_run_interval = Histogram(
+    "garbage_collection_run_interval",
+    "The interval of two garbage collection run.",
+    ["name"],
+)
 
 
 class TimeoutException(Exception):
@@ -15,6 +38,7 @@ class TimeoutDecorator:
         self,
         timeout=None,
         cache_time=0,
+        name="",
         garbage_collection_interval=5,
         garbage_collection_count=30,
     ):
@@ -32,6 +56,8 @@ class TimeoutDecorator:
         cache_time: int
             after function return normally,
                 how long should we cache the result (in sec).
+        name: str
+            prometheus_client metrics prefix
         garbage_collection_interval: count
             the count should execute the garbage_collection.
         garbage_collection_interval: int
@@ -44,6 +70,7 @@ class TimeoutDecorator:
         """
         self.timeout = timeout
         self.cache_time = cache_time
+        self.name = name
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
 
@@ -70,13 +97,6 @@ class TimeoutDecorator:
                     return False
             return True
 
-        logger.info(
-            f"""Start garbage collection metrics:
-        Last garbage collection time: {self.garbage_collection_timestamp},
-        Start collection time: {time.time()}
-        len(heap): {len(self.heap)}
-        len(thread_cache): {self.thread_cache}"""
-        )
         worked_keys = {}
         while can_iterate():
             _timestamp, _key = None, None
@@ -90,13 +110,19 @@ class TimeoutDecorator:
                     continue
                 if self.is_expired(self.thread_cache[_key]):
                     del self.thread_cache[_key]
-        self.garbage_collection_timestamp = time.time()
-        logger.info(
-            f"""Finish garbage collection finish metrics:
-        Finish garbage collection time: {self.garbage_collection_timestamp},
-        len(heap): {len(self.heap)}
-        len(thread_cache): {self.thread_cache}"""
-        )
+                    _collected_total.labels(name=self.name).inc(1)
+        _heap_cache_count.labels(
+            name=self.name,
+        ).set(len(self.heap))
+        _thread_cache_count.labels(
+            name=self.name,
+        ).set(len(self.thread_cache))
+        current_time = time.time()
+        if self.garbage_collection_timestamp != 0:
+            _collection_run_interval.labels(
+                name=self.name,
+            ).observe(current_time - self.garbage_collection_timestamp)
+        self.garbage_collection_timestamp = current_time
 
     def is_expired(self, cache):
         """Check thread_cache dict is expired."""
@@ -126,6 +152,9 @@ class TimeoutDecorator:
                                 key,
                             ),
                         )
+                        _heap_cache_count.labels(
+                            name=self.name,
+                        ).set(len(self.heap))
                 except Exception as e:
                     cache["error"] = e
 
@@ -145,6 +174,9 @@ class TimeoutDecorator:
                     )
                     cache["thread"].start()
                 self.thread_cache[key] = cache
+                _thread_cache_count.labels(
+                    name=self.name,
+                ).set(len(self.thread_cache))
             cache["thread"].join(self.timeout)
 
             if (
