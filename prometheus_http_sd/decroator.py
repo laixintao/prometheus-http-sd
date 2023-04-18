@@ -5,25 +5,25 @@ import threading
 from prometheus_client import Gauge, Counter, Histogram
 
 _collected_total = Counter(
-    "garbage_collection_collected_items",
+    "httpsd_garbage_collection_collected_items_total",
     "The total count of the garbage collection collected items.",
     ["name"],
 )
 
 _thread_cache_count = Gauge(
-    "garbage_collection_cache_count",
+    "httpsd_garbage_collection_cache_count",
     "Show current thread_cache count",
     ["name"],
 )
 
 _heap_cache_count = Gauge(
-    "garbage_collection_heap_count",
+    "httpsd_garbage_collection_heap_count",
     "Show current heap length",
     ["name"],
 )
 
 _collection_run_interval = Histogram(
-    "garbage_collection_run_interval",
+    "http_sd_garbage_collection_run_interval_seconds_bucket",
     "The interval of two garbage collection run.",
     ["name"],
 )
