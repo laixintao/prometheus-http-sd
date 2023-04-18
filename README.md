@@ -21,6 +21,7 @@ framework.
   - [Overwriting `job_name` labels](#overwriting-job_name-labels)
   - [Check and Validate your Targets](#check-and-validate-your-targets)
   - [Script Dependencies](#script-dependencies)
+  - [Target Generator Timeout Time](#target-generator-timeout-time)
 - [Update Your Scripts](#update-your-scripts)
 - [Best Practice](#best-practice)
 
@@ -96,7 +97,7 @@ Let's put another generator using Python:
 Put this into your `targets/by_python.py`:
 
 ```python
-def generate_targets():
+def generate_targets(**extra_parameters):
   return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd"}}
 ```
 
@@ -190,7 +191,7 @@ Then you need to tell prometheus_http_sd to serve all HTTP requests under this
 path, by using the `--url_prefix /http_sd` cli option, (or `-r /http_sd` for
 short).
 
-## Define you targets
+## Define your targets
 
 ### Your target generator
 
@@ -303,6 +304,45 @@ args), then `check` will run `test_generate_targets` instead. (So you can call
 If you want your scripts to use some other python library, just install them
 into the **same virtualenv** that you install prometheus-http-sd, so that
 prometheus-http-sd can import them.
+
+### Target Generator Timeout Time
+
+To prevent potential server overload caused by intensive
+Python scripts invoked by the Prometheus client,
+we created a generator decorator that spawns a thread for each unique function call.
+Our design includes a 60-second wait period for each generated thread.
+If the thread fails to complete within this timeframe, the decorator raises
+a `TimeoutException` to notify the user that the target cannot be resolved.
+It is important to note that the thread will continue running despite the raised exception.
+The overall process appears as follows:
+```
+First Function call (timeout)
+└─┘
+Second Function call (timeout)
+             └─┘
+Third Function call(get result)
+                       └─┘
+Function Operating   Cache time
+└───────────────────┴───────────┘
+```
+The thread continues running until the target function returns a result,
+which is then cached. Subsequent calls can retrieve the cached result.
+
+This is an example if you want to use the decorator in your target function:
+```python
+from prometheus_http_sd.decroator import TimeoutDecorator
+
+@TimeoutDecorator(
+    timeout=60,                      # how long should we wait for the function
+    cache_time=1,                    # how long should we cache the result
+    name="target_generator",         # timeout decorator name in prometheus-sd metrics
+    garbage_collection_interval=5,   # the second to avoid collection too often
+    garbage_collection_count=100,    # garbage collection threshold
+)
+def generate_targets(**extra_parameters):
+  # some havy operation here.
+  return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd"}}
+```
 
 ## Update Your Scripts
 

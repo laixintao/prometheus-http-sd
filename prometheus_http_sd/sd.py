@@ -11,6 +11,7 @@ from typing import List
 from .targets import TargetList
 from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
+from prometheus_http_sd.decroator import TimeoutDecorator
 
 import yaml
 
@@ -143,6 +144,12 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
+@TimeoutDecorator(
+    timeout=60,
+    cache_time=1,
+    name="target_generator",
+    garbage_collection_count=100,
+)
 def run_python(generator_path, **extra_args) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
