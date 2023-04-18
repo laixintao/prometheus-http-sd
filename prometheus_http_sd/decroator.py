@@ -58,8 +58,8 @@ class TimeoutDecorator:
                 how long should we cache the result (in sec).
         name: str
             prometheus_client metrics prefix
-        garbage_collection_interval: count
-            the count should execute the garbage_collection.
+        garbage_collection_count: int
+            garbage collection threshold
         garbage_collection_interval: int
             the second to avoid collection too often.
 
