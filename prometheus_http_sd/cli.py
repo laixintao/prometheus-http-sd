@@ -2,6 +2,8 @@ import logging
 import sys
 import click
 import waitress
+
+from .mem_perf import start_tracing_thread
 from .config import config
 from .validate import validate
 from .app import create_app
@@ -54,9 +56,18 @@ def main(log_level):
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
-def serve(host, port, connection_limit, threads, url_prefix, root_dir):
+@click.option(
+    "--enable-tracer",
+    "-v",
+    is_flag=True,
+    help="Enable memory tracer, will print it into logs",
+)
+def serve(host, port, connection_limit, threads, url_prefix, root_dir, enable_tracer):
     config.root_dir = root_dir
     app = create_app(url_prefix)
+
+    if enable_tracer:
+        start_tracing_thread()
     waitress.serve(
         app,
         host=host,
