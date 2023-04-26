@@ -62,7 +62,9 @@ def main(log_level):
     is_flag=True,
     help="Enable memory tracer, will print it into logs",
 )
-def serve(host, port, connection_limit, threads, url_prefix, root_dir, enable_tracer):
+def serve(
+    host, port, connection_limit, threads, url_prefix, root_dir, enable_tracer
+):
     config.root_dir = root_dir
     app = create_app(url_prefix)
 
