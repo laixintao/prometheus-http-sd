@@ -37,7 +37,8 @@ class TimeoutDecorator:
     def __init__(
         self,
         timeout=None,
-        cache_time=60 * 5,
+        cache_time=0,
+        name="",
         garbage_collection_interval=5,
         garbage_collection_count=30,
     ):
@@ -56,7 +57,7 @@ class TimeoutDecorator:
             after function return normally,
                 how long should we cache the result (in sec).
         name: str
-            prometheus_client metrics label
+            prometheus_client metrics prefix
         garbage_collection_count: int
             garbage collection threshold
         garbage_collection_interval: int
@@ -69,6 +70,7 @@ class TimeoutDecorator:
         """
         self.timeout = timeout
         self.cache_time = cache_time
+        self.name = name
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
 
@@ -88,7 +90,7 @@ class TimeoutDecorator:
             and len(self.heap) > self.garbage_collection_count
         )
 
-    def _cache_garbage_collection(self, name_label):
+    def _cache_garbage_collection(self):
         def can_iterate():
             with self.heap_lock:
                 if len(self.heap) == 0 or self.heap[0][0] > time.time():
@@ -108,17 +110,17 @@ class TimeoutDecorator:
                     continue
                 if self.is_expired(self.thread_cache[_key]):
                     del self.thread_cache[_key]
-                    _collected_total.labels(name=name_label).inc(1)
+                    _collected_total.labels(name=self.name).inc(1)
         _heap_cache_count.labels(
-            name=name_label,
+            name=self.name,
         ).set(len(self.heap))
         _thread_cache_count.labels(
-            name=name_label,
+            name=self.name,
         ).set(len(self.thread_cache))
         current_time = time.time()
         if self.garbage_collection_timestamp != 0:
             _collection_run_interval.labels(
-                name=name_label,
+                name=self.name,
             ).observe(current_time - self.garbage_collection_timestamp)
         self.garbage_collection_timestamp = current_time
 
@@ -130,8 +132,6 @@ class TimeoutDecorator:
         return hash(tuple([hash(arg), tuple(sorted(kwargs.items()))]))
 
     def __call__(self, function):
-        name_label = f"{function.__module__}/{function.__funcname__}"
-
         def wrapper(*arg, **kwargs):
             cache = {
                 "thread": None,
@@ -153,7 +153,7 @@ class TimeoutDecorator:
                             ),
                         )
                         _heap_cache_count.labels(
-                            name=name_label,
+                            name=self.name,
                         ).set(len(self.heap))
                 except Exception as e:
                     cache["error"] = e
@@ -175,7 +175,7 @@ class TimeoutDecorator:
                     cache["thread"].start()
                 self.thread_cache[key] = cache
                 _thread_cache_count.labels(
-                    name=name_label,
+                    name=self.name,
                 ).set(len(self.thread_cache))
             cache["thread"].join(self.timeout)
 
@@ -184,7 +184,7 @@ class TimeoutDecorator:
                 and self.garbage_collection_lock.acquire(False)
             ):
                 try:
-                    self._cache_garbage_collection(name_label)
+                    self._cache_garbage_collection()
                 finally:
                     self.garbage_collection_lock.release()
             if cache["thread"].is_alive():
