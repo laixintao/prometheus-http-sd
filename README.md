@@ -12,6 +12,7 @@ framework.
 - [Installation](#installation)
 - [Usage](#usage)
   - [The Python Target Generator](#the-python-target-generator)
+  - [Python Target Generator Cache and Throttle](#python-target-generator-cache-and-throttle)
   - [Manage prometheus-http-sd by systemd](#manage-prometheus-http-sd-by-systemd)
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
@@ -21,7 +22,6 @@ framework.
   - [Overwriting `job_name` labels](#overwriting-job_name-labels)
   - [Check and Validate your Targets](#check-and-validate-your-targets)
   - [Script Dependencies](#script-dependencies)
-  - [Target Generator Timeout Time](#target-generator-timeout-time)
 - [Update Your Scripts](#update-your-scripts)
 - [Best Practice](#best-practice)
 
@@ -39,6 +39,7 @@ framework.
 - Admin page to list all target paths;
 - Auto reload when generator or targets changed;
 - Support managing targets in a hierarchy way;
+- Throttle parallel execution and cache the result for Python script;
 
 ## Installation
 
@@ -143,6 +144,20 @@ Then `curl http://127.0.0.1:8080/targets?cluster=us1` you will get:
 ```shell
 {"targets": "10.1.1.22:2379", "labels": {"app": "etcd", "cluster": "us1"}}
 ```
+
+### Python Target Generator Cache and Throttle
+
+Support you have 10 Prometheus instance request http-sd for targets every
+minutes, for Python script target generator, it doesn't make sense that the same
+script run 10 times in every minute, instead, it should run only once, and use
+this result to respond for 10 Prometheus instances.
+
+prometheus-http-sd has cache and throttle by default, that means:
+
+- At any time there is only one python script running
+- The result will be cached for 1minute (This means that every script at max
+  will be only running one time per minute, and your target update will delay at
+  most 1 minute)
 
 ### Manage prometheus-http-sd by systemd
 
@@ -293,67 +308,18 @@ $ prometheus-http-sd check test/test_generator/root
 It's a good idea to use `prometheus-http-sd check` in your CI system to validate
 your targets generator scripts and target files.
 
-For Python script, `prometheus-http-sd check` command will run `generate_targets`
-in each script, without any params. However, you can overwrite the `check` logic
-by providing a function called `test_generate_targets()`(without any function
-args), then `check` will run `test_generate_targets` instead. (So you can call
-`generate_targets(foo="bar")` to set the test logic of your own.
+For Python script, `prometheus-http-sd check` command will run
+`generate_targets` in each script, without any params. However, you can
+overwrite the `check` logic by providing a function called
+`test_generate_targets()`(without any function args), then `check` will run
+`test_generate_targets` instead. (So you can call `generate_targets(foo="bar")`
+to set the test logic of your own.
 
 ### Script Dependencies
 
 If you want your scripts to use some other python library, just install them
 into the **same virtualenv** that you install prometheus-http-sd, so that
 prometheus-http-sd can import them.
-
-### Target Generator Timeout Time
-
-To prevent potential server overload caused by intensive
-Python scripts invoked by the Prometheus client,
-we created a generator decorator that spawns a thread for each unique function call.
-Our design includes a 60-second wait period for each generated thread.
-If the thread fails to complete within this timeframe, the decorator raises
-a `TimeoutException` to notify the user that the target cannot be resolved.
-It is important to note that the thread will continue running despite the raised exception.
-The overall process appears as follows:
-```
-First Function call (timeout)
-└─┘
-Second Function call (timeout)
-             └─┘
-Third Function call(get result)
-                       └─┘
-Function Operating   Cache time
-└───────────────────┴───────────┘
-```
-The thread continues running until the target function returns a result,
-which is then cached. Subsequent calls can retrieve the cached result.
-
-This is an example if you want to use the decorator in your target function:
-```python
-from prometheus_http_sd.decroator import TimeDecorator
-
-@TimeDecorator(
-    execute_timeout=60,                      # how long should we wait for the function in seconds, note this
-                                             # is the time limitation for the decorated function, not the cache timeout
-    cache_timeout=120,                       # how long should we cache the result
-)
-def heavy_function():
-    # some heavy works
-    pass
-```
-
-```python
-# targets/target.py
-
-path = str(Path(os.path.dirname(__file__)) / "..")
-sys.path.append(path)
-
-from heavy import heavy_function
-
-def generate_targets(**extra_parameters):
-  targets = heavy_function()
-  return [{"targets": targets, "labels": {"app": "etcd"}}]
-```
 
 ## Update Your Scripts
 
