@@ -1,9 +1,4 @@
-from prometheus_http_sd.decroator import TimeDecorator
 
-
-@TimeDecorator(
-    cache_time=100,
-)
 def generate_targets():
     import time
 
