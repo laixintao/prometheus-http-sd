@@ -146,7 +146,7 @@ def run_json(file_path: str) -> TargetList:
 
 @TimeoutDecorator(
     timeout=60,
-    cache_time=1,
+    cache_time=60,
     name="target_generator",
     garbage_collection_count=100,
 )
