@@ -1,4 +1,3 @@
-
 def generate_targets():
     import time
 
