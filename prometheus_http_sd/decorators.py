@@ -33,11 +33,11 @@ class TimeoutException(Exception):
     pass
 
 
-class TimeoutDecorator:
+class TimeDecorator:
     def __init__(
         self,
-        timeout=None,
-        cache_time=60 * 5,
+        execute_timeout=None,
+        cache_timeout=60 * 5,
         garbage_collection_interval=5,
         garbage_collection_count=30,
     ):
@@ -64,11 +64,11 @@ class TimeoutDecorator:
 
         Returns
         -------
-        TimeoutDecorator
+        TimeDecorator
             decorator class.
         """
-        self.timeout = timeout
-        self.cache_time = cache_time
+        self.timeout = execute_timeout
+        self.cache_time = cache_timeout
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
 

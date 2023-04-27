@@ -2,11 +2,11 @@ import time
 import pytest
 
 from random import random
-from prometheus_http_sd.decorator import TimeoutDecorator, TimeoutException
+from prometheus_http_sd.decroator import TimeDecorator, TimeoutException
 
 
 def test_timeout_cache():
-    @TimeoutDecorator(
+    @TimeDecorator(
         timeout=0.5,
         cache_time=1,
         garbage_collection_interval=0,
@@ -36,7 +36,7 @@ def test_timeout_cache():
 
 
 def test_garbage_collection():
-    decorator = TimeoutDecorator(
+    decorator = TimeDecorator(
         timeout=0.5,
         cache_time=1,
         garbage_collection_interval=0,

@@ -11,7 +11,7 @@ from typing import List
 from .targets import TargetList
 from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
-from prometheus_http_sd.decorator import TimeoutDecorator
+from prometheus_http_sd.decroator import TimeDecorator
 
 import yaml
 
@@ -144,7 +144,7 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
-@TimeoutDecorator(
+@TimeDecorator(
     timeout=60,
     cache_time=1,
     name="target_generator",

@@ -15,7 +15,7 @@ framework.
   - [Manage prometheus-http-sd by systemd](#manage-prometheus-http-sd-by-systemd)
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
-- [Define you targets](#define-you-targets)
+- [Define your targets](#define-your-targets)
   - [Your target generator](#your-target-generator)
   - [The Target Path](#the-target-path)
   - [Overwriting `job_name` labels](#overwriting-job_name-labels)
@@ -330,15 +330,12 @@ which is then cached. Subsequent calls can retrieve the cached result.
 
 This is an example if you want to use the decorator in your target function:
 ```python
-# heavy.py
-from prometheus_http_sd.decorator import TimeoutDecorator
+from prometheus_http_sd.decroator import TimeDecorator
 
-@TimeoutDecorator(
-    timeout=60,                      # how long should we wait for the function
-    cache_time=1,                    # how long should we cache the result
-    name="target_generator",         # timeout decorator name in prometheus-sd metrics
-    garbage_collection_interval=5,   # the second to avoid collection too often
-    garbage_collection_count=100,    # garbage collection threshold
+@TimeDecorator(
+    execute_timeout=60,                      # how long should we wait for the function in seconds, note this
+                                             # is the time limitation for the decorated function, not the cache timeout
+    cache_timeout=120,                       # how long should we cache the result
 )
 def heavy_function():
     # some heavy works

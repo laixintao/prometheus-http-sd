@@ -1,7 +1,7 @@
-from prometheus_http_sd.decroator import TimeoutDecorator
+from prometheus_http_sd.decroator import TimeDecorator
 
 
-@TimeoutDecorator(
+@TimeDecorator(
     cache_time=100,
 )
 def generate_targets():
