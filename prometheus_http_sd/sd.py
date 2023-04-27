@@ -162,6 +162,7 @@ def _get_cache(key):
     if time.time() - result.created_timestamp > 60:
         return None
 
+    logger.info("Cache hit for key: %s", key)
     return result.value
 
 
@@ -171,22 +172,34 @@ def get_lock(path):
     return python_targets_locks[path]
 
 
+def get_cache_key(path, **extra_args):
+    keys = sorted(extra_args.keys())
+
+    cache_key = path
+    for key in keys:
+        cache_key += f"/{key}:{extra_args[key]}"
+
+    return cache_key
+
+
 def run_python(generator_path, **extra_args) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
-    cached = _get_cache(generator_path)
+    cache_key = get_cache_key(generator_path, **extra_args)
+
+    cached = _get_cache(cache_key)
     if cached:
         return cached
-    logger.info("%s Cache not hit")
+    logger.info("%s Cache not hit", cache_key)
 
-    lock = get_lock(generator_path)
+    lock = get_lock(cache_key)
 
     with lock:
-        cached = _get_cache(generator_path)
+        cached = _get_cache(cache_key)
         if cached:
-            logger.info("%s Cache hit in lock")
+            logger.info("%s Cache hit in lock", cache_key)
             return cached
-        logger.info("%s Cache not hit in lock, run script...")
+        logger.info("%s Cache not hit in lock, run script...", cache_key)
 
         loader = importlib.machinery.SourceFileLoader(
             "mymodule", generator_path
