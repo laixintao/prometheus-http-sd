@@ -2,7 +2,7 @@ import time
 import pytest
 
 from random import random
-from prometheus_http_sd.decroator import TimeoutDecorator, TimeoutException
+from prometheus_http_sd.decorator import TimeoutDecorator, TimeoutException
 
 
 def test_timeout_cache():

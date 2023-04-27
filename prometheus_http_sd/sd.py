@@ -11,7 +11,7 @@ from typing import List
 from .targets import TargetList
 from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
-from prometheus_http_sd.decroator import TimeoutDecorator
+from prometheus_http_sd.decorator import TimeoutDecorator
 
 import yaml
 

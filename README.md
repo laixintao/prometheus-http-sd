@@ -98,7 +98,7 @@ Put this into your `targets/by_python.py`:
 
 ```python
 def generate_targets(**extra_parameters):
-  return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd"}}
+  return [{"targets": ["10.1.1.22:2379"], "labels": {"app": "etcd"}}]
 ```
 
 Then you can run `prometheus-http-sd serve -h 0.0.0.0 -p 8080 /tmp/targets`,
@@ -135,7 +135,7 @@ For example:
 ```python
 def generate_targets(**params):
   cluster = params.get("cluster")
-  return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd", "cluster": cluster}}
+  return [{"targets": ["10.1.1.22:2379"], "labels": {"app": "etcd", "cluster": cluster}}]
 ```
 
 Then `curl http://127.0.0.1:8080/targets?cluster=us1` you will get:
@@ -330,7 +330,8 @@ which is then cached. Subsequent calls can retrieve the cached result.
 
 This is an example if you want to use the decorator in your target function:
 ```python
-from prometheus_http_sd.decroator import TimeoutDecorator
+# heavy.py
+from prometheus_http_sd.decorator import TimeoutDecorator
 
 @TimeoutDecorator(
     timeout=60,                      # how long should we wait for the function
@@ -339,9 +340,22 @@ from prometheus_http_sd.decroator import TimeoutDecorator
     garbage_collection_interval=5,   # the second to avoid collection too often
     garbage_collection_count=100,    # garbage collection threshold
 )
+def heavy_function():
+    # some heavy works
+    pass
+```
+
+```python
+# targets/target.py
+
+path = str(Path(os.path.dirname(__file__)) / "..")
+sys.path.append(path)
+
+from heavy import heavy_function
+
 def generate_targets(**extra_parameters):
-  # some havy operation here.
-  return {"targets": "10.1.1.22:2379", "labels": {"app": "etcd"}}
+  targets = heavy_function()
+  return [{"targets": targets, "labels": {"app": "etcd"}}]
 ```
 
 ## Update Your Scripts
