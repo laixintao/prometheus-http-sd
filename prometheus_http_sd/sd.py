@@ -1,19 +1,17 @@
 import os
 import json
-import time
 import logging
 import importlib
 import importlib.machinery
 
 import importlib.util
 from pathlib import Path
-from collections import namedtuple
 
 from typing import List
 from .targets import TargetList
 from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
-from threading import Lock
+from prometheus_http_sd.decorator import TimeoutDecorator
 
 import yaml
 
@@ -146,85 +144,32 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
-python_targets_cache = {}
-
-CacheEntry = namedtuple("CacheEntry", "created_timestamp value")
-CACHE_TIMEOUT = 60
-
-python_targets_locks = {}
-
-
-def _get_cache(key):
-    result = python_targets_cache.get(key)
-    if not result:
-        return None
-
-    if time.time() - result.created_timestamp > 60:
-        return None
-
-    logger.info("Cache hit for key: %s", key)
-    return result.value
-
-
-def get_lock(path):
-    if path not in python_targets_locks:
-        python_targets_locks[path] = Lock()
-    return python_targets_locks[path]
-
-
-def get_cache_key(path, **extra_args):
-    keys = sorted(extra_args.keys())
-
-    cache_key = path
-    for key in keys:
-        cache_key += f"/{key}:{extra_args[key]}"
-
-    return cache_key
-
-
+@TimeoutDecorator(
+    timeout=60,
+    cache_time=60,
+    name="target_generator",
+    garbage_collection_count=100,
+)
 def run_python(generator_path, **extra_args) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
-    cache_key = get_cache_key(generator_path, **extra_args)
+    loader = importlib.machinery.SourceFileLoader("mymodule", generator_path)
+    spec = importlib.util.spec_from_loader("mymodule", loader)
+    if spec:
+        mymodule = importlib.util.module_from_spec(spec)
+        loader.exec_module(mymodule)
+    else:
+        raise Exception("Load a None module!")
+    func = getattr(mymodule, "generate_targets")
 
-    cached = _get_cache(cache_key)
-    if cached:
-        return cached
-    logger.info("%s Cache not hit", cache_key)
-
-    lock = get_lock(cache_key)
-
-    with lock:
-        cached = _get_cache(cache_key)
-        if cached:
-            logger.info("%s Cache hit in lock", cache_key)
-            return cached
-        logger.info("%s Cache not hit in lock, run script...", cache_key)
-
-        loader = importlib.machinery.SourceFileLoader(
-            "mymodule", generator_path
-        )
-        spec = importlib.util.spec_from_loader("mymodule", loader)
-        if spec:
-            mymodule = importlib.util.module_from_spec(spec)
-            loader.exec_module(mymodule)
+    if os.getenv(TEST_ENV_NAME) == "1":
+        try:
+            test_func = getattr(mymodule, "test_generate_targets")
+        except AttributeError:
+            pass
         else:
-            raise Exception("Load a None module!")
-        func = getattr(mymodule, "generate_targets")
-
-        if os.getenv(TEST_ENV_NAME) == "1":
-            try:
-                test_func = getattr(mymodule, "test_generate_targets")
-            except AttributeError:
-                pass
-            else:
-                func = test_func
-        result = func(**extra_args)
-        python_targets_cache[generator_path] = CacheEntry(
-            created_timestamp=time.time(), value=result
-        )
-
-    return result
+            func = test_func
+    return func(**extra_args)
 
 
 def run_yaml(file_path: str):
