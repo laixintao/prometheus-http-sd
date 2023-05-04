@@ -4,6 +4,8 @@ version = "1.2.1"
 description = "Prometheus HTTP SD framework."
 authors = ["laixintao <laixintaoo@gmail.com>"]
 readme = 'README.md'
+homepage = "https://python-poetry.org://github.com/laixintao/prometheus-http-sd"
+
 
 [tool.poetry.dependencies]
 python = "^3.7"
