@@ -27,9 +27,11 @@ version_info = Info(
 version_info.info({"version": VERSION})
 target_path_requests_total = Counter(
     "httpsd_path_requests_total",
-    "The total count of a path being requested, status label can be"
-    " success/fail",
-    ["path", "status"],
+    (
+        "The total count of a path being requested, status label can be"
+        " success/fail"
+    ),
+    ["path", "status", "l1_dir", "l2_dir"],
 )
 target_path_request_duration_seconds = Histogram(
     "httpsd_target_path_request_duration_seconds",
@@ -60,11 +62,19 @@ def create_app(prefix):
     @app.route(f"{prefix}/targets/<path:rest_path>")
     def get_targets(rest_path):
         logger.info(
-            "request target path: {} with parameters: {}".format(
+            "request target path: {}, with parameters: {}".format(
                 rest_path,
                 request.args,
             )
         )
+
+        l1_dir = l2_dir = ""
+        path_splits = rest_path.split("/")
+        if len(path_splits) > 0:
+            l1_dir = path_splits[0]
+        if len(path_splits) > 1:
+            l2_dir = path_splits[1]
+
         with target_path_request_duration_seconds.labels(
             path=rest_path
         ).time():
@@ -75,12 +85,15 @@ def create_app(prefix):
                 abort(404)
             except:  # noqa: E722
                 target_path_requests_total.labels(
-                    path=rest_path, status="fail"
+                    path=rest_path, status="fail", l1_dir=l1_dir, l2_dir=l2_dir
                 ).inc()
                 raise
             else:
                 target_path_requests_total.labels(
-                    path=rest_path, status="success"
+                    path=rest_path,
+                    status="success",
+                    l1_dir=l1_dir,
+                    l2_dir=l2_dir,
                 ).inc()
                 path_last_generated_targets.labels(path=rest_path).set(
                     sum(len(t.get("targets", [])) for t in targets)
