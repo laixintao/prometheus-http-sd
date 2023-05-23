@@ -1,6 +1,6 @@
-import copy
 import time
 import heapq
+import traceback
 import threading
 
 from prometheus_client import Gauge, Counter, Histogram
@@ -30,7 +30,20 @@ _collection_run_interval = Histogram(
 )
 
 
+class WrapTargetException(Exception):
+    """Raised when user's function raises an exception."""
+
+    def __init__(self, message, exception_type="Exception", traceback=[]):
+        traceback = "\n".join(traceback)
+        super().__init__(
+            self,
+            f"exception_type: {exception_type}, message: {message}, traceback: {traceback}",
+        )
+
+
 class TimeoutException(Exception):
+    """Raised when target function timeout."""
+
     pass
 
 
@@ -138,6 +151,7 @@ class TimeoutDecorator:
                 "thread": None,
                 "error": None,
                 "response": None,
+                "traceback": [],
                 "expired_timestamp": float("inf"),
             }
 
@@ -146,7 +160,11 @@ class TimeoutDecorator:
                     cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
                 except Exception as e:
-                    cache["error"] = e
+                    cache["error"] = {
+                        "message": str(e),
+                        "error_type": type(e).__name__,
+                        "traceback": traceback.extract_tb(e.__traceback__),
+                    }
                     cache["expired_timestamp"] = 0
                 with self.heap_lock:
                     heapq.heappush(
@@ -192,9 +210,12 @@ class TimeoutDecorator:
             if cache["thread"].is_alive():
                 raise TimeoutException("target function timeout!")
             if cache["error"]:
+                e = cache["error"]
                 # avoid duplicated append the traceback
-                raise copy.copy(cache["error"]).with_traceback(
-                    cache["error"].__traceback__
+                raise WrapTargetException(
+                    e["message"],
+                    e["error_type"],
+                    e["traceback"],
                 )
             return cache["response"]
 
