@@ -37,7 +37,8 @@ class WrapTargetException(Exception):
         traceback = "\n".join(traceback)
         super().__init__(
             self,
-            f"exception_type: {exception_type}, message: {message}, traceback: {traceback}",
+            f"""this is a cached exception,
+type: {exception_type}, message: {message}, traceback: {traceback}""",
         )
 
 
