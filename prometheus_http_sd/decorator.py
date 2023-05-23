@@ -1,3 +1,4 @@
+import copy
 import time
 import heapq
 import threading
@@ -144,19 +145,20 @@ class TimeoutDecorator:
                 try:
                     cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
-                    with self.heap_lock:
-                        heapq.heappush(
-                            self.heap,
-                            (
-                                cache["expired_timestamp"],
-                                key,
-                            ),
-                        )
-                        _heap_cache_count.labels(
-                            name=self.name,
-                        ).set(len(self.heap))
                 except Exception as e:
                     cache["error"] = e
+                    cache["expired_timestamp"] = 0
+                with self.heap_lock:
+                    heapq.heappush(
+                        self.heap,
+                        (
+                            cache["expired_timestamp"],
+                            key,
+                        ),
+                    )
+                    _heap_cache_count.labels(
+                        name=self.name,
+                    ).set(len(self.heap))
 
             key = self._cal_cache_key(*arg, **kwargs)
             with self.cache_lock:
@@ -190,7 +192,10 @@ class TimeoutDecorator:
             if cache["thread"].is_alive():
                 raise TimeoutException("target function timeout!")
             if cache["error"]:
-                raise cache["error"]
+                # avoid duplicated append the traceback
+                raise copy.copy(cache["error"]).with_traceback(
+                    cache["error"].__traceback__
+                )
             return cache["response"]
 
         return wrapper
