@@ -155,26 +155,17 @@ def test_duplicated_append_traceback_problem():
 
     assert first_error is not second_error
 
-    print(traceback.extract_tb(
-        first_error.__traceback__
-    ))
-    print(traceback.extract_tb(
-        second_error.__traceback__
-    ))
-
     # since python stores the tb in the same address,
     # raise a exception twice will be a problem.
     # therefore, we copy the exception in the cache decorator
     #    to correct the traceback
-    assert traceback.extract_tb(
-        first_error.__traceback__
-    )[0] != traceback.extract_tb(
-        second_error.__traceback__
-    )[0]
+    assert (
+        traceback.extract_tb(first_error.__traceback__)[0]
+        != traceback.extract_tb(second_error.__traceback__)[0]
+    )
     # expect the first item (function call from "test_timeout"),
     # other tb should be the same
-    assert traceback.extract_tb(
-        first_error.__traceback__
-    )[1:] == traceback.extract_tb(
-        second_error.__traceback__
-    )[1:]
+    assert (
+        traceback.extract_tb(first_error.__traceback__)[1:]
+        == traceback.extract_tb(second_error.__traceback__)[1:]
+    )
