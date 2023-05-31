@@ -34,7 +34,7 @@ class WrapTargetException(Exception):
     """Raised when user's function raises an exception."""
 
     def __init__(self, message, exception_type="Exception", traceback=[]):
-        traceback = "\n".join(traceback)
+        traceback = "".join(traceback)
         super().__init__(
             self,
             f"""this is a cached exception,
@@ -164,7 +164,7 @@ class TimeoutDecorator:
                     cache["error"] = {
                         "message": str(e),
                         "error_type": type(e).__name__,
-                        "traceback": traceback.extract_tb(e.__traceback__),
+                        "traceback": traceback.format_tb(e.__traceback__),
                     }
                     cache["expired_timestamp"] = 0
                 with self.heap_lock:
