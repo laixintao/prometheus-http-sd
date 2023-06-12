@@ -185,7 +185,7 @@ class TimeoutDecorator:
             with self.cache_lock:
                 if key in self.thread_cache:
                     if self.thread_cache[key][
-                        "thread"
+                        "traceback"
                     ].is_alive() or not self.is_expired(
                         self.thread_cache[key]
                     ):
