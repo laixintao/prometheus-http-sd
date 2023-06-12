@@ -134,9 +134,10 @@ class TimeoutDecorator:
                 if _key not in self.thread_cache:
                     continue
                 if self.is_expired(self.thread_cache[_key]):
-                    traceback.clear_frames(
-                        self.thread_cache[_key]["traceback"],
-                    )
+                    if "traceback" in self.thread_cache[_key]:
+                        traceback.clear_frames(
+                            self.thread_cache[_key]["traceback"],
+                        )
                     del self.thread_cache[_key]
                     _collected_total.labels(name=self.name).inc(1)
         _heap_cache_count.labels(
@@ -202,7 +203,7 @@ class TimeoutDecorator:
             with self.cache_lock:
                 if key in self.thread_cache:
                     if self.thread_cache[key][
-                        "traceback"
+                        "thread"
                     ].is_alive() or not self.is_expired(
                         self.thread_cache[key]
                     ):
