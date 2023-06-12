@@ -54,6 +54,7 @@ class TimeoutDecorator:
         self,
         timeout=None,
         cache_time=0,
+        cache_exception_time=0,
         name="",
         garbage_collection_interval=5,
         garbage_collection_count=30,
@@ -73,6 +74,9 @@ class TimeoutDecorator:
         cache_time: int
             after function return normally,
                 how long should we cache the result (in sec).
+        cache_exception_time: int
+            after function return incorrectly,
+                how long should we cache the exception (in sec).
         name: str
             prometheus_client metrics prefix
         garbage_collection_count: int
@@ -89,6 +93,7 @@ class TimeoutDecorator:
         """
         self.timeout = timeout
         self.cache_time = cache_time
+        self.cache_exception_time = cache_exception_time
         self.name = name
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
@@ -178,7 +183,9 @@ class TimeoutDecorator:
                         "error_type": type(e).__name__,
                         "traceback": e.__traceback__,
                     }
-                    cache["expired_timestamp"] = 0
+                    cache["expired_timestamp"] = (
+                        time.time() + self.cache_exception_time
+                    )
                 with self.heap_lock:
                     heapq.heappush(
                         self.heap,
