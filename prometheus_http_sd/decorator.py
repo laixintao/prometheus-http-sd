@@ -1,3 +1,4 @@
+import copy
 import time
 import heapq
 import traceback
@@ -56,6 +57,7 @@ class TimeoutDecorator:
         name="",
         garbage_collection_interval=5,
         garbage_collection_count=30,
+        copy_response=False,
     ):
         """
         Use threading and cache to store the function result.
@@ -77,6 +79,8 @@ class TimeoutDecorator:
             garbage collection threshold
         garbage_collection_interval: int
             the second to avoid collection too often.
+        copy_response: bool
+            use copy.deepcopy on the response from the target function.
 
         Returns
         -------
@@ -88,6 +92,7 @@ class TimeoutDecorator:
         self.name = name
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
+        self.copy_response = copy_response
 
         self.thread_cache = {}
         self.cache_lock = threading.Lock()
@@ -124,6 +129,9 @@ class TimeoutDecorator:
                 if _key not in self.thread_cache:
                     continue
                 if self.is_expired(self.thread_cache[_key]):
+                    traceback.clear_frames(
+                        self.thread_cache[_key]["traceback"],
+                    )
                     del self.thread_cache[_key]
                     _collected_total.labels(name=self.name).inc(1)
         _heap_cache_count.labels(
@@ -152,23 +160,25 @@ class TimeoutDecorator:
                 "thread": None,
                 "error": None,
                 "response": None,
-                "traceback": [],
                 "expired_timestamp": float("inf"),
             }
 
             def target_function(key):
                 try:
-                    cache["response"] = function(*arg, **kwargs)
+                    if self.copy_response:
+                        cache["response"] = copy.deepcopy(
+                            function(*arg, **kwargs),
+                        )
+                    else:
+                        cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
                 except Exception as e:
                     cache["error"] = {
                         "message": str(e),
                         "error_type": type(e).__name__,
-                        "traceback": traceback.format_tb(e.__traceback__),
+                        "traceback": e.__traceback__,
                     }
                     cache["expired_timestamp"] = 0
-
-                    raise e
                 with self.heap_lock:
                     heapq.heappush(
                         self.heap,
@@ -185,7 +195,7 @@ class TimeoutDecorator:
             with self.cache_lock:
                 if key in self.thread_cache:
                     if self.thread_cache[key][
-                        "thread"
+                        "traceback"
                     ].is_alive() or not self.is_expired(
                         self.thread_cache[key]
                     ):
@@ -218,8 +228,8 @@ class TimeoutDecorator:
                 raise CachedScriptException(
                     e["message"],
                     e["error_type"],
-                    e["traceback"],
-                )
-            return cache["response"]
+                    traceback.format_tb(e["traceback"]),
+                ).with_traceback(e["traceback"])
+            return copy.deepcopy(cache["response"])
 
         return wrapper
