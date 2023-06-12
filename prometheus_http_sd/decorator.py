@@ -124,6 +124,9 @@ class TimeoutDecorator:
                 if _key not in self.thread_cache:
                     continue
                 if self.is_expired(self.thread_cache[_key]):
+                    traceback.clear_frames(
+                        self.thread_cache[_key]["traceback"],
+                    )
                     del self.thread_cache[_key]
                     _collected_total.labels(name=self.name).inc(1)
         _heap_cache_count.labels(
@@ -152,7 +155,7 @@ class TimeoutDecorator:
                 "thread": None,
                 "error": None,
                 "response": None,
-                "traceback": [],
+                "traceback": None,
                 "expired_timestamp": float("inf"),
             }
 
@@ -164,11 +167,9 @@ class TimeoutDecorator:
                     cache["error"] = {
                         "message": str(e),
                         "error_type": type(e).__name__,
-                        "traceback": traceback.format_tb(e.__traceback__),
+                        "traceback": e.__traceback__,
                     }
                     cache["expired_timestamp"] = 0
-
-                    raise e
                 with self.heap_lock:
                     heapq.heappush(
                         self.heap,
@@ -218,8 +219,8 @@ class TimeoutDecorator:
                 raise CachedScriptException(
                     e["message"],
                     e["error_type"],
-                    e["traceback"],
-                )
+                    traceback.format_tb(e["traceback"]),
+                ).with_traceback(e["traceback"])
             return cache["response"]
 
         return wrapper
