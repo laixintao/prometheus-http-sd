@@ -1,3 +1,4 @@
+import copy
 import time
 import heapq
 import traceback
@@ -56,6 +57,7 @@ class TimeoutDecorator:
         name="",
         garbage_collection_interval=5,
         garbage_collection_count=30,
+        copy_response=False,
     ):
         """
         Use threading and cache to store the function result.
@@ -77,6 +79,8 @@ class TimeoutDecorator:
             garbage collection threshold
         garbage_collection_interval: int
             the second to avoid collection too often.
+        copy_response: bool
+            use copy.deepcopy on the response from the target function.
 
         Returns
         -------
@@ -88,6 +92,7 @@ class TimeoutDecorator:
         self.name = name
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
+        self.copy_response = copy_response
 
         self.thread_cache = {}
         self.cache_lock = threading.Lock()
@@ -160,7 +165,12 @@ class TimeoutDecorator:
 
             def target_function(key):
                 try:
-                    cache["response"] = function(*arg, **kwargs)
+                    if self.copy_response:
+                        cache["response"] = copy.deepcopy(
+                            function(*arg, **kwargs),
+                        )
+                    else:
+                        cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
                 except Exception as e:
                     cache["error"] = {
@@ -220,6 +230,6 @@ class TimeoutDecorator:
                     e["error_type"],
                     traceback.format_tb(e["traceback"]),
                 ).with_traceback(e["traceback"])
-            return cache["response"]
+            return copy.deepcopy(cache["response"])
 
         return wrapper
