@@ -155,7 +155,6 @@ class TimeoutDecorator:
                 "thread": None,
                 "error": None,
                 "response": None,
-                "traceback": None,
                 "expired_timestamp": float("inf"),
             }
 
