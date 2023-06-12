@@ -16,6 +16,7 @@ framework.
   - [Manage prometheus-http-sd by systemd](#manage-prometheus-http-sd-by-systemd)
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
+  - [Sentry APM](#sentry-apm)
 - [Define your targets](#define-your-targets)
   - [Your target generator](#your-target-generator)
   - [The Target Path](#the-target-path)
@@ -40,6 +41,7 @@ framework.
 - Auto reload when generator or targets changed;
 - Support managing targets in a hierarchy way;
 - Throttle parallel execution and cache the result for Python script;
+- Support Sentry APM.
 
 ## Installation
 
@@ -205,6 +207,13 @@ location /http_sd/ {
 Then you need to tell prometheus_http_sd to serve all HTTP requests under this
 path, by using the `--url_prefix /http_sd` cli option, (or `-r /http_sd` for
 short).
+
+### Sentry APM
+
+You can use the option `--sentry-url <you-sentry-url>` (or `-s <your-sentry-url>`)
+to enable Sentry APM.
+
+The Exception from user's script will be sent to Sentry.
 
 ## Define your targets
 

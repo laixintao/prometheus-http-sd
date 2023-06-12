@@ -1,3 +1,4 @@
+import copy
 import time
 import heapq
 import traceback
@@ -30,7 +31,7 @@ _collection_run_interval = Histogram(
 )
 
 
-class WrapTargetException(Exception):
+class CachedScriptException(Exception):
     """Raised when user's function raises an exception."""
 
     def __init__(self, message, exception_type="Exception", traceback=[]):
@@ -53,9 +54,11 @@ class TimeoutDecorator:
         self,
         timeout=None,
         cache_time=0,
+        cache_exception_time=0,
         name="",
         garbage_collection_interval=5,
         garbage_collection_count=30,
+        copy_response=False,
     ):
         """
         Use threading and cache to store the function result.
@@ -71,12 +74,17 @@ class TimeoutDecorator:
         cache_time: int
             after function return normally,
                 how long should we cache the result (in sec).
+        cache_exception_time: int
+            after function return incorrectly,
+                how long should we cache the exception (in sec).
         name: str
             prometheus_client metrics prefix
         garbage_collection_count: int
             garbage collection threshold
         garbage_collection_interval: int
             the second to avoid collection too often.
+        copy_response: bool
+            use copy.deepcopy on the response from the target function.
 
         Returns
         -------
@@ -85,9 +93,11 @@ class TimeoutDecorator:
         """
         self.timeout = timeout
         self.cache_time = cache_time
+        self.cache_exception_time = cache_exception_time
         self.name = name
         self.garbage_collection_interval = garbage_collection_interval
         self.garbage_collection_count = garbage_collection_count
+        self.copy_response = copy_response
 
         self.thread_cache = {}
         self.cache_lock = threading.Lock()
@@ -124,6 +134,10 @@ class TimeoutDecorator:
                 if _key not in self.thread_cache:
                     continue
                 if self.is_expired(self.thread_cache[_key]):
+                    if "traceback" in self.thread_cache[_key]:
+                        traceback.clear_frames(
+                            self.thread_cache[_key]["traceback"],
+                        )
                     del self.thread_cache[_key]
                     _collected_total.labels(name=self.name).inc(1)
         _heap_cache_count.labels(
@@ -152,21 +166,27 @@ class TimeoutDecorator:
                 "thread": None,
                 "error": None,
                 "response": None,
-                "traceback": [],
                 "expired_timestamp": float("inf"),
             }
 
             def target_function(key):
                 try:
-                    cache["response"] = function(*arg, **kwargs)
+                    if self.copy_response:
+                        cache["response"] = copy.deepcopy(
+                            function(*arg, **kwargs),
+                        )
+                    else:
+                        cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
                 except Exception as e:
                     cache["error"] = {
                         "message": str(e),
                         "error_type": type(e).__name__,
-                        "traceback": traceback.format_tb(e.__traceback__),
+                        "traceback": e.__traceback__,
                     }
-                    cache["expired_timestamp"] = 0
+                    cache["expired_timestamp"] = (
+                        time.time() + self.cache_exception_time
+                    )
                 with self.heap_lock:
                     heapq.heappush(
                         self.heap,
@@ -213,11 +233,11 @@ class TimeoutDecorator:
             if cache["error"]:
                 e = cache["error"]
                 # avoid duplicated append the traceback
-                raise WrapTargetException(
+                raise CachedScriptException(
                     e["message"],
                     e["error_type"],
-                    e["traceback"],
-                )
-            return cache["response"]
+                    traceback.format_tb(e["traceback"]),
+                ).with_traceback(e["traceback"])
+            return copy.deepcopy(cache["response"])
 
         return wrapper
