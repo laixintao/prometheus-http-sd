@@ -62,14 +62,40 @@ def main(log_level):
     is_flag=True,
     help="Enable memory tracer, will print it into logs",
 )
+@click.option(
+    "--sentry-url",
+    "-s",
+    help=(
+        "Using sentry AMP(sentry.io) You need to manually pip install"
+        " sentry-sdk"
+    ),
+)
 def serve(
-    host, port, connection_limit, threads, url_prefix, root_dir, enable_tracer
+    host,
+    port,
+    connection_limit,
+    threads,
+    url_prefix,
+    root_dir,
+    enable_tracer,
+    sentry_url,
 ):
     config.root_dir = root_dir
     app = create_app(url_prefix)
 
     if enable_tracer:
         start_tracing_thread()
+
+    if sentry_url:
+        try:
+            import sentry_sdk
+        except ImportError:
+            print("import sentry_sdk failed, please pip install sentry-sdk")
+            sys.exit(2)
+
+        sentry_sdk.init(sentry_url)
+        print("sentry sdk initialized!")
+
     waitress.serve(
         app,
         host=host,

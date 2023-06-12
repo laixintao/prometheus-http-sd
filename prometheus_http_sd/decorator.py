@@ -30,7 +30,7 @@ _collection_run_interval = Histogram(
 )
 
 
-class WrapTargetException(Exception):
+class CachedScriptException(Exception):
     """Raised when user's function raises an exception."""
 
     def __init__(self, message, exception_type="Exception", traceback=[]):
@@ -167,6 +167,8 @@ class TimeoutDecorator:
                         "traceback": traceback.format_tb(e.__traceback__),
                     }
                     cache["expired_timestamp"] = 0
+
+                    raise e
                 with self.heap_lock:
                     heapq.heappush(
                         self.heap,
@@ -213,7 +215,7 @@ class TimeoutDecorator:
             if cache["error"]:
                 e = cache["error"]
                 # avoid duplicated append the traceback
-                raise WrapTargetException(
+                raise CachedScriptException(
                     e["message"],
                     e["error_type"],
                     e["traceback"],
