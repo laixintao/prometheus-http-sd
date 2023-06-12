@@ -154,10 +154,13 @@ class TimeoutDecorator:
                 "response": None,
                 "traceback": [],
                 "expired_timestamp": float("inf"),
+                "raw_exception": None,
+                "raised_raw": False,
             }
 
             def target_function(key):
                 try:
+                    print("running target function")
                     cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
                 except Exception as e:
@@ -167,8 +170,9 @@ class TimeoutDecorator:
                         "traceback": traceback.format_tb(e.__traceback__),
                     }
                     cache["expired_timestamp"] = 0
+                    cache["raw_exception"] = e
+                    cache["raised_raw"] = False
 
-                    raise e
                 with self.heap_lock:
                     heapq.heappush(
                         self.heap,
@@ -213,13 +217,21 @@ class TimeoutDecorator:
             if cache["thread"].is_alive():
                 raise TimeoutException("target function timeout!")
             if cache["error"]:
-                e = cache["error"]
-                # avoid duplicated append the traceback
-                raise CachedScriptException(
-                    e["message"],
-                    e["error_type"],
-                    e["traceback"],
-                )
+                print("cache: %s", cache)
+                print("cache id: %s", id(cache))
+                print("thread cache: %s", self.thread_cache)
+                if not cache["raised_raw"]:
+                    cache["raised_raw"] = True
+                    print("cache: %s", cache)
+                    raise cache["raw_exception"]
+                else:
+                    e = cache["error"]
+                    # avoid duplicated append the traceback
+                    raise CachedScriptException(
+                        e["message"],
+                        e["error_type"],
+                        e["traceback"],
+                    )
             return cache["response"]
 
         return wrapper
