@@ -21,7 +21,12 @@ def validate(root_dir, ignore_dirs=None):
     by_generator = {}
     for generator in generators:
         start = time.time()
-        target_list = run_generator(generator)
+        try:
+            target_list = run_generator(generator)
+        except:  # noqa E772
+            logger.exception("Error when run generator: %s", generator)
+            sys.exit(1)
+
         all_good = True
         for t in target_list:
             all_good = check_content(t)
