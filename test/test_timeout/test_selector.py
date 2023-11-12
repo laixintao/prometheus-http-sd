@@ -1,7 +1,6 @@
 import time
 
 from prometheus_http_sd.decorator import (
-    TimeoutDecorator,
     TimeoutException,
     DecoratorSelector,
 )
@@ -27,5 +26,5 @@ def test_decorator_select():
         function()
         assert False, "it should raise a timeout exception"
         pass
-    except TimeoutException as e:
+    except TimeoutException:
         pass

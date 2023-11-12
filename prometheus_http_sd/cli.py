@@ -78,7 +78,10 @@ def main(log_level):
 )
 @click.option(
     "--cache.opt",
-    help="Options pass to the cache object. Input format should be k=v. ex: timeout=1",
+    help=(
+        "Options pass to the cache object."
+        "Input format should be k=v. ex: timeout=1"
+    ),
     multiple=True,
     default=[
         "timeout=60",
@@ -150,7 +153,7 @@ def setup_cache(cache_type, config_opt):
         except ValueError:
             print(
                 "value format incorrect. required key=value, but get %s" % opt,
-                file=os.stderr,
+                file=sys.stderr,
             )
             sys.exit(127)
         kwargs[key] = value
