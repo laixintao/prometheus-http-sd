@@ -50,6 +50,42 @@ class TimeoutException(Exception):
 
 
 class TimeoutDecorator:
+    """
+    TimeoutDecorator run target function in a single thread.
+
+    +------------+
+    |            |
+    |            |
+    |            |                  +-----------+
+    |  Caller 1  +----+             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    +------------+    |             |           |
+                      |             |           |
+                      |             |           |
+    +------------+    |             |           |                  +----------+
+    |            |    |             |           |                  |          |
+    |            |    | call at the |           | only single call |          |
+    |            |    |  same time  |  Timeout  |    to the back   |          |
+    |  Caller 2  +----+------------>+   Cache   +----------------->+ Function |
+    |            |    |             |           |                  |          |
+    |            |    |             |           |                  |          |
+    |            |    |             |           |                  |          |
+    +------------+    |             |           |                  +----------+
+                      |             |           |
+                      |             |           |
+    +------------+    |             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    |  Caller 3  +----+             |           |
+    |            |                  +-----------+
+    |            |
+    |            |
+    +------------+
+    """
+
     def __init__(
         self,
         timeout=None,
@@ -162,6 +198,8 @@ class TimeoutDecorator:
 
     def __call__(self, function):
         def wrapper(*arg, **kwargs):
+            # cache stores the context for this function call.
+            # same function call will use the same cache.
             cache = {
                 "thread": None,
                 "error": None,
@@ -169,6 +207,7 @@ class TimeoutDecorator:
                 "expired_timestamp": float("inf"),
             }
 
+            # target_function is a wrapper of the real function
             def target_function(key):
                 try:
                     if self.copy_response:
@@ -232,12 +271,123 @@ class TimeoutDecorator:
                 raise TimeoutException("target function timeout!")
             if cache["error"]:
                 e = cache["error"]
-                # avoid duplicated append the traceback
                 raise CachedScriptException(
                     e["message"],
                     e["error_type"],
                     traceback.format_tb(e["traceback"]),
                 ).with_traceback(e["traceback"])
             return copy.deepcopy(cache["response"])
+
+        return wrapper
+
+
+class NoDecoratorException(Exception):
+    """Raised if cache type not found."""
+
+    pass
+
+
+class DecoratorSelector:
+    """Wrapper for select different "run_python" function cache method."""
+
+    def __init__(
+        self,
+        cache_type="None",
+        **kwargs,
+    ):
+        """
+        Init function to select the target decorators.
+
+        Parameters
+        ----------
+        cache_type: str
+            select different decorators.
+        kwargs: Dict[string, Any]
+            parameters passed to the target cache decorators.
+
+        Raises
+        ------
+        NoDecoratorException
+            If no cache type matches.
+        """
+        self._functions = []
+        self.select_decorator(cache_type, **kwargs)
+
+    def select_decorator(
+        self,
+        cache_type="Timeout",
+        **kwargs,
+    ):
+        """
+        Re-init the decorator.
+
+        Parameters
+        ----------
+        cache_type: str
+            select different decorators.
+        kwargs: Dict[string, Any]
+            parameters passed to the target cache decorators.
+
+        Raises
+        ------
+        NoDecoratorException
+            If no cache type matches.
+        """
+        if cache_type == "Timeout":
+            self._decorator = self._timeout_decorator_init(**kwargs)
+        elif cache_type == "None":
+            self._decorator = lambda function: function
+        else:
+            raise NoDecoratorException(
+                "cache_type %s not support" % cache_type
+            )
+        for index in range(0, len(self._functions)):
+            function = self._functions[index][0]
+            self._functions[index] = (
+                function,
+                self._decorator(function),
+            )
+
+    def _timeout_decorator_init(
+        self,
+        timeout=None,
+        cache_time=0,
+        cache_exception_time=0,
+        name="",
+        garbage_collection_interval=5,
+        garbage_collection_count=30,
+        copy_response=False,
+    ):
+        if timeout is not None:
+            timeout = int(timeout)
+        cache_time = int(cache_time)
+        cache_exception_time = int(cache_exception_time)
+        name = str(name)
+        garbage_collection_interval = int(garbage_collection_interval)
+        garbage_collection_count = int(garbage_collection_count)
+        copy_response = bool(copy_response)
+        return TimeoutDecorator(
+            timeout=timeout,
+            cache_time=cache_time,
+            cache_exception_time=cache_exception_time,
+            name=name,
+            garbage_collection_interval=garbage_collection_interval,
+            garbage_collection_count=garbage_collection_count,
+            copy_response=copy_response,
+        )
+
+    def __call__(self, function):
+        """Call the decorator that we initialized."""
+        target_function = self._decorator(function)
+        self._functions.append(
+            (
+                function,
+                target_function,
+            )
+        )
+        index = len(self._functions) - 1
+
+        def wrapper(*arg, **kwargs):
+            return self._functions[index][1](*arg, **kwargs)
 
         return wrapper

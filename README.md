@@ -208,6 +208,81 @@ Then you need to tell prometheus_http_sd to serve all HTTP requests under this
 path, by using the `--url_prefix /http_sd` cli option, (or `-r /http_sd` for
 short).
 
+### Change Certificate
+
+By default, `prometheus-http-sd` has caching capabilities for Python targets to avoid server crashes due to too many queries.
+```
+    +------------+
+    |            |
+    |            |
+    |            |                  +-----------+
+    |  Caller 1  +----+             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    +------------+    |             |           |
+                      |             |           |
+                      |             |           |
+    +------------+    |             |           |                  +----------+
+    |            |    |             |           |                  |          |
+    |            |    | call at the |           | only single call |          |
+    |            |    |  same time  |  Timeout  |    to the back   |          |
+    |  Caller 2  +----|------------>+   Cache   +----------------->+ Function |
+    |            |    |             |           |                  |          |
+    |            |    |             |           |                  |          |
+    |            |    |             |           |                  |          |
+    +------------+    |             |           |                  +----------+
+                      |             |           |
+                      |             |           |
+    +------------+    |             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    |            |    |             |           |
+    |  Caller 3  +----+             |           |
+    |            |                  +-----------+
+    |            |
+    |            |
+    +------------+
+```
+
+To change this behavior, you can use the option `--cache-type` to change the cache behavior.
+
+Also, you can use the option `--cache-opt` to change the variable.
+For example:
+
+```bash
+prometheus-http-sd serve       \
+    -h 0.0.0.0                 \
+    -p 8080                    \
+    --cache-type="Timeout"     \
+    --cache-opt="timeout=360"  \
+    /opt/httpsd_targets
+
+```
+
+#### Timeout
+
+This is the default value, It will cache the result or exception from the target function.
+* `timeout=<seconds>`:
+  function timeout. if exceed, raise TimeoutException (in sec).
+* `cache_time=<seconds>`:
+  after function return normally, how long should we cache the result (in sec).
+* `cache_exception_time=<seconds>`:
+  after function return incorrectly, how long should we cache the exception (in sec).
+* `name=<str>`:
+  prometheus_client metrics prefix
+* `garbage_collection_count=<seconds>`:
+  garbage collection threshold
+* `garbage_collection_interval=<seconds>`:
+  the second to avoid collection too often.
+* `copy_response=<bool>`:
+  if true, use copy.deepcopy on the response from the target function.
+    
+    
+#### None
+
+This is a dummy function if you don't need any cache method.
+
 ### Sentry APM
 
 You can use the option `--sentry-url <you-sentry-url>` (or `-s <your-sentry-url>`)
