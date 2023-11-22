@@ -247,7 +247,7 @@ By default, `prometheus-http-sd` has caching capabilities for Python targets to 
 
 To change this behavior, you can use the option `--cache-type` to change the cache behavior.
 
-Also, you can use the option `--cache.opt` to change the variable. 
+Also, you can use the option `--cache-opt` to change the variable.
 For example:
 
 ```bash
@@ -255,7 +255,7 @@ prometheus-http-sd serve       \
     -h 0.0.0.0                 \
     -p 8080                    \
     --cache-type="Timeout"     \
-    --cache.opt="timeout=360"  \
+    --cache-opt="timeout=360"  \
     /opt/httpsd_targets
 
 ```

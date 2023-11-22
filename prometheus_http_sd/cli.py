@@ -74,10 +74,11 @@ def main(log_level):
 @click.option(
     "--cache-type",
     help='Cache of "py_run" function. Can be None or Timeout.',
+    type=click.Choice(['Timeout', 'None']),
     default="Timeout",
 )
 @click.option(
-    "--cache.opt",
+    "--cache-opt",
     help=(
         "Options pass to the cache object."
         "Input format should be k=v. ex: timeout=1"
