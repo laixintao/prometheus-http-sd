@@ -82,27 +82,41 @@ def test_exception_cache():
     global a
     a = 0
 
+    class TestException(Exception):
+        pass
+
     @decorator
     def function():
         global a
         a += 1
-        raise Exception("A")
+        raise TestException("A")
 
     first_error = None
     second_error = None
     try:
         function()
         assert False, "function should raise error"
-    except Exception as e:
+    except TestException as e:
+        traceback.print_exc()
         first_error = e
 
     try:
         function()
         assert False, "function should raise error"
-    except Exception as e:
+    except TestException as e:
+        traceback.print_exc()
         second_error = e
 
-    assert first_error is not second_error
+    assert first_error is not second_error, "return same error object"
+    # first item is the function call position. Which is different
+    assert (
+        traceback.format_tb(first_error.__traceback__)[0]
+        != traceback.format_tb(second_error.__traceback__)[0]
+    ), "cached the error is the wrong behavior"
+    assert (
+        traceback.format_tb(first_error.__traceback__)[1:]
+        == traceback.format_tb(second_error.__traceback__)[1:]
+    ), "traceback stack should be the same"
     assert a == 2
 
 
@@ -110,18 +124,23 @@ def test_duplicated_append_traceback_problem():
     decorator = TimeoutDecorator(
         timeout=2,
         cache_time=999,
+        cache_exception_time=10,
         garbage_collection_interval=0,
         garbage_collection_count=1000000,  # avoid automatic garbage collection
     )
 
     global first_error
     global second_error
+    global call_count
     first_error = None
     second_error = None
+    call_count = 0
 
     @decorator
     def function():
         time.sleep(1)
+        global call_count
+        call_count += 1
         raise Exception("A")
 
     def first_function():
@@ -169,3 +188,5 @@ def test_duplicated_append_traceback_problem():
         traceback.extract_tb(first_error.__traceback__)[1:]
         == traceback.extract_tb(second_error.__traceback__)[1:]
     )
+
+    assert call_count == 1, "target function should only been call once"

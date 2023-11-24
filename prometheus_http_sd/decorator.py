@@ -31,18 +31,6 @@ _collection_run_interval = Histogram(
 )
 
 
-class CachedScriptException(Exception):
-    """Raised when user's function raises an exception."""
-
-    def __init__(self, message, exception_type="Exception", traceback=[]):
-        traceback = "".join(traceback)
-        super().__init__(
-            self,
-            f"""this is a cached exception,
-type: {exception_type}, message: {message}, traceback: {traceback}""",
-        )
-
-
 class TimeoutException(Exception):
     """Raised when target function timeout."""
 
@@ -197,6 +185,15 @@ class TimeoutDecorator:
         return hash(tuple([hash(arg), tuple(sorted(kwargs.items()))]))
 
     def __call__(self, function):
+        """
+        Call target function with response cache.
+
+        Raises
+        ------
+        TimeoutException
+            If the target function exceeds the executing time.
+        """
+
         def wrapper(*arg, **kwargs):
             # cache stores the context for this function call.
             # same function call will use the same cache.
@@ -218,11 +215,7 @@ class TimeoutDecorator:
                         cache["response"] = function(*arg, **kwargs)
                     cache["expired_timestamp"] = time.time() + self.cache_time
                 except Exception as e:
-                    cache["error"] = {
-                        "message": str(e),
-                        "error_type": type(e).__name__,
-                        "traceback": e.__traceback__,
-                    }
+                    cache["error"] = e
                     cache["expired_timestamp"] = (
                         time.time() + self.cache_exception_time
                     )
@@ -271,12 +264,11 @@ class TimeoutDecorator:
                 raise TimeoutException("target function timeout!")
             if cache["error"]:
                 e = cache["error"]
-                raise CachedScriptException(
-                    e["message"],
-                    e["error_type"],
-                    traceback.format_tb(e["traceback"]),
-                ).with_traceback(e["traceback"])
-            return copy.deepcopy(cache["response"])
+                raise copy.copy(e).with_traceback(e.__traceback__)
+            if self.copy_response:
+                return copy.deepcopy(cache["response"])
+            else:
+                return cache["response"]
 
         return wrapper
 
