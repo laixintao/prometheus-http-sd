@@ -4,7 +4,7 @@ This is a
 [Prometheus HTTP SD](https://prometheus.io/docs/prometheus/latest/http_sd/)
 framework.
 
-[![Test](https://github.com/laixintao/prometheus-http-sd/actions/workflows/test.yaml/badge.svg)](https://github.com/laixintao/prometheus-http-sd/actions/workflows/test.yaml)
+[![Test](https://github.com/laixintao/prometheus-http-sd/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/laixintao/prometheus-http-sd/actions/workflows/test.yaml)
 
 <!-- vim-markdown-toc GFM -->
 
