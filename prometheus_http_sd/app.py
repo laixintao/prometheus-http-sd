@@ -27,10 +27,8 @@ version_info = Info(
 version_info.info({"version": VERSION})
 target_path_requests_total = Counter(
     "httpsd_path_requests_total",
-    (
-        "The total count of a path being requested, status label can be"
-        " success/fail"
-    ),
+    "The total count of a path being requested, status label can be"
+    " success/fail",
     ["path", "status", "l1_dir", "l2_dir"],
 )
 target_path_request_duration_seconds = Histogram(
@@ -80,9 +78,6 @@ def create_app(prefix):
         ).time():
             try:
                 targets = generate(config.root_dir, rest_path, **request.args)
-            except FileNotFoundError:
-                logger.error(f"Didn't found {config.root_dir}/{rest_path}!")
-                abort(404)
             except:  # noqa: E722
                 target_path_requests_total.labels(
                     path=rest_path, status="fail", l1_dir=l1_dir, l2_dir=l2_dir
