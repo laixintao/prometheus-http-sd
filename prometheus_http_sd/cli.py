@@ -116,13 +116,16 @@ def serve(
             import sentry_sdk
             from sentry_sdk.integrations.flask import FlaskIntegration
         except ImportError:
-            print("import sentry_sdk failed, please pip install 'sentry-sdk[flask]'")
+            print(
+                "import sentry_sdk failed, please pip install"
+                " 'sentry-sdk[flask]'"
+            )
             sys.exit(2)
 
         sentry_sdk.init(
             dsn=sentry_url,
             enable_tracing=True,
-            integrations = [
+            integrations=[
                 FlaskIntegration(
                     transaction_style="url",
                 ),
