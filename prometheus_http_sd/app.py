@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 
-from flask import Flask, jsonify, abort, render_template, request
+from flask import Flask, jsonify, render_template, request
 from .sd import generate
 from .version import VERSION
 from .config import config
