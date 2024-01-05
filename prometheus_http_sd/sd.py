@@ -52,7 +52,8 @@ def should_ignore(full_path, ignore_dirs):
                 return True
 
     should_ignore_this = any(
-        p.startswith("_") or p.startswith(".") for p in os.path.normpath(full_path).split(os.sep)
+        p.startswith("_") or p.startswith(".")
+        for p in os.path.normpath(full_path).split(os.sep)
     )
 
     if should_ignore_this:
