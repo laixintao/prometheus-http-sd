@@ -41,7 +41,7 @@ generator_run_duration_seconds = Histogram(
 )
 
 
-def should_ignore(file, full_path, ignore_dirs):
+def should_ignore(full_path, ignore_dirs):
     if ignore_dirs:
         for ignore in ignore_dirs:
             if full_path.startswith(ignore):
@@ -51,11 +51,11 @@ def should_ignore(file, full_path, ignore_dirs):
                 )
                 return True
 
-    should_ignore = any(
+    should_ignore_this = any(
         p.startswith("_") or p.startswith(".") for p in os.path.normpath(full_path).split(os.sep)
     )
 
-    if should_ignore:
+    if should_ignore_this:
         return True
 
     return False
@@ -82,7 +82,7 @@ def get_generator_list(
         for file in files:
             full_path = os.path.join(root, file)
 
-            ignore = should_ignore(file, full_path, ignore_dirs)
+            ignore = should_ignore(full_path, ignore_dirs)
             logger.info(f"{file=}, ignore={ignore}")
             if ignore:
                 continue
