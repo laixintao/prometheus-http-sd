@@ -51,17 +51,13 @@ def should_ignore(file, full_path, ignore_dirs):
                 )
                 return True
 
-    should_ignore_underscore = any(
-        p.startswith("_") for p in os.path.normpath(full_path).split(os.sep)
+    should_ignore = any(
+        p.startswith("_") or p.startswith(".") for p in os.path.normpath(full_path).split(os.sep)
     )
 
-    if should_ignore_underscore:
+    if should_ignore:
         return True
 
-    should_ignore_hidden = file.startswith(".")
-
-    if should_ignore_hidden:
-        return True
     return False
 
 
