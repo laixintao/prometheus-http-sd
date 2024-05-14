@@ -133,7 +133,7 @@ def run_generator(generator_path: str, **extra_args) -> TargetList:
             ).inc()
 
         generator_last_generated_targets.labels(generator=generator_path).set(
-            sum(len(t.get("targets", [])) for t in result)
+            sum(len(t.get("targets", []) or []) for t in result)
         )
 
     return result
