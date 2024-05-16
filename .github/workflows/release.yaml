@@ -17,13 +17,6 @@ jobs:
           python-version: 3.9
           architecture: "x64"
 
-      - name: Cache venv
-        uses: actions/cache@v1
-        with:
-          path: venv
-          # Look to see if there is a cache hit for the corresponding requirements file
-          key: ubuntu-latest-poetryenv-${{ hashFiles('poetry.lock') }}
-
       - name: Install Dependencies
         run: |
           python3 -m venv venv
@@ -37,6 +30,7 @@ jobs:
       - name: Poetry Build
         run: |
           . venv/bin/activate
+          pip list
           poetry build
 
       - name: Test Build
