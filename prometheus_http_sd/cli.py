@@ -103,14 +103,6 @@ def serve(
     cache_type,
     cache_opt,
 ):
-    config.root_dir = root_dir
-    app = create_app(url_prefix)
-
-    setup_cache(cache_type, cache_opt)
-
-    if enable_tracer:
-        start_tracing_thread()
-
     if sentry_url:
         try:
             import sentry_sdk
@@ -124,7 +116,6 @@ def serve(
 
         sentry_sdk.init(
             dsn=sentry_url,
-            enable_tracing=True,
             integrations=[
                 FlaskIntegration(
                     transaction_style="url",
@@ -132,6 +123,14 @@ def serve(
             ],
         )
         print("sentry sdk initialized!")
+    config.root_dir = root_dir
+    app = create_app(url_prefix)
+
+    setup_cache(cache_type, cache_opt)
+
+    if enable_tracer:
+        start_tracing_thread()
+
 
     waitress.serve(
         app,
