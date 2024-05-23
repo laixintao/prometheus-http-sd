@@ -8,6 +8,8 @@ import importlib.util
 from pathlib import Path
 
 from typing import List
+
+from prometheus_http_sd.exceptions import SDResultNotValidException
 from .targets import TargetList
 from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
@@ -122,6 +124,8 @@ def run_generator(generator_path: str, **extra_args) -> TargetList:
     ).time():
         try:
             result = executor(generator_path, **extra_args)
+            if result is None:
+                raise SDResultNotValidException("Generated result is None")
         except:  # noqa: E722
             generator_requests_total.labels(
                 generator=generator_path, status="fail"
