@@ -14,6 +14,7 @@ from .targets import TargetList
 from .const import TEST_ENV_NAME
 from prometheus_client import Gauge, Counter, Histogram
 from prometheus_http_sd.decorator import DecoratorSelector
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import yaml
 
@@ -41,6 +42,8 @@ generator_run_duration_seconds = Histogram(
     "The time cost that this generator run",
     ["generator"],
 )
+
+generator_executor = ThreadPoolExecutor(max_workers=400)
 
 
 def should_ignore(full_path, ignore_dirs):
@@ -99,8 +102,14 @@ def get_generator_list(
 def generate(root: str, path: str = "", **extra_args) -> TargetList:
     generators = get_generator_list(root, path)
     all_targets = []
+
+    futures = []
     for generator in generators:
-        target_list = run_generator(generator, **extra_args)
+        future = generator_executor.submit(run_generator, generator, **extra_args)
+        futures.append(future)
+
+    for future in as_completed(futures):
+        target_list = future.result()
         all_targets.extend(target_list)
 
     return all_targets
