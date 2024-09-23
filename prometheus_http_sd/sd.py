@@ -1,22 +1,22 @@
-import os
-import json
-import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import importlib
 import importlib.machinery
-
 import importlib.util
+import json
+import logging
+import os
 from pathlib import Path
+import time
+from typing import Dict, List
 
-from typing import List
-
-from prometheus_http_sd.exceptions import SDResultNotValidException
-from .targets import TargetList
-from .const import TEST_ENV_NAME
-from prometheus_client import Gauge, Counter, Histogram
-from prometheus_http_sd.decorator import DecoratorSelector
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from prometheus_client import Counter, Gauge, Histogram
 import yaml
+
+from prometheus_http_sd.decorator import DecoratorSelector
+from prometheus_http_sd.exceptions import SDResultNotValidException
+
+from .const import TEST_ENV_NAME
+from .targets import TargetList
 
 try:
     from yaml import CLoader as Loader
@@ -105,7 +105,9 @@ def generate(root: str, path: str = "", **extra_args) -> TargetList:
 
     futures = []
     for generator in generators:
-        future = generator_executor.submit(run_generator, generator, **extra_args)
+        future = generator_executor.submit(
+            run_generator, generator, **extra_args
+        )
         futures.append(future)
 
     for future in as_completed(futures):
@@ -113,6 +115,28 @@ def generate(root: str, path: str = "", **extra_args) -> TargetList:
         all_targets.extend(target_list)
 
     return all_targets
+
+
+def _timed_wrapper(*args, **kwargs):
+    start = time.time()
+    run_generator(*args, **kwargs)
+    return time.time() - start
+
+
+def generate_perf(root: str, path: str = "", **extra_args) -> Dict[str, float]:
+    generators = get_generator_list(root, path)
+    futures = {}
+    result = {}
+
+    for generator in generators:
+        futures[generator] = generator_executor.submit(
+            _timed_wrapper, generator, **extra_args
+        )
+
+    for generator, future in futures.items():
+        time_cost = future.result()
+        result[generator] = time_cost
+    return {"generator_run_seconds": result}
 
 
 def run_generator(generator_path: str, **extra_args) -> TargetList:
