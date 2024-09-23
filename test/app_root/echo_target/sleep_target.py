@@ -1,7 +1,7 @@
 import time
 
 
-def generate_targets():
+def generate_targets(**kwargs):
     """Return arg list in label target."""
     time.sleep(3)
     return [
