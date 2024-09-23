@@ -62,7 +62,7 @@ def create_app(prefix):
 
         if request.args.get("debug") == "true":
             arg_list = dict(request.args)
-            del arg_list['debug']
+            del arg_list["debug"]
             return generate_perf(config.root_dir, rest_path, **arg_list)
 
         logger.info(
