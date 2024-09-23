@@ -16,6 +16,9 @@ framework.
   - [Manage prometheus-http-sd by systemd](#manage-prometheus-http-sd-by-systemd)
   - [Admin Page](#admin-page)
   - [Serve under a different root path](#serve-under-a-different-root-path)
+  - [Change Certificate](#change-certificate)
+    - [Timeout](#timeout)
+    - [None](#none)
   - [Sentry APM](#sentry-apm)
 - [Define your targets](#define-your-targets)
   - [Your target generator](#your-target-generator)
@@ -24,6 +27,7 @@ framework.
   - [Check and Validate your Targets](#check-and-validate-your-targets)
   - [Script Dependencies](#script-dependencies)
 - [Update Your Scripts](#update-your-scripts)
+- [Debug Your Scripts](#debug-your-scripts)
 - [Best Practice](#best-practice)
 
 <!-- vim-markdown-toc -->
@@ -433,6 +437,20 @@ think that your script run successfully and empty the target list as well.
 
 You can notice this error from stdout logs or `/metrics` from
 prometheus-http-sd.
+
+## Debug Your Scripts
+
+Debug script latency.
+
+You can add `?debug=true` at the end of your target url to see the time
+cost of each generator of a path.
+
+For example:
+
+```shell
+curl http://127.0.0.1:8080/targets/echo_target\?debug\=true
+{"generator_run_seconds":{"./test/app_root/echo_target/sleep2_target.py":2.005011796951294,"./test/app_root/echo_target/sleep_target.py":3.00480318069458,"./test/app_root/echo_target/target.py":0.0009987354278564453}}
+```
 
 ## Best Practice
 
