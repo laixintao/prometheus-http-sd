@@ -131,7 +131,6 @@ def serve(
     if enable_tracer:
         start_tracing_thread()
 
-
     waitress.serve(
         app,
         host=host,

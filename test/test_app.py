@@ -14,5 +14,7 @@ def test_app_target_with_parameters(client):
         {
             "labels": {"domain": "example.com", "info": "test"},
             "targets": ["127.0.0.1:8080"],
-        }
+        },
+        {"labels": {"sleep": "2"}, "targets": ["127.0.0.1:8080"]},
+        {"labels": {"sleep": "3"}, "targets": ["127.0.0.1:8080"]},
     ]

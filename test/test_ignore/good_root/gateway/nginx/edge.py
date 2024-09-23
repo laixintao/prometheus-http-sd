@@ -1,4 +1,4 @@
-def generate_targets():
+def generate_targets(**kwargs):
     return [
         {
             "targets": ["10.71.99.1:3333", "10.71.99.2:3333"],

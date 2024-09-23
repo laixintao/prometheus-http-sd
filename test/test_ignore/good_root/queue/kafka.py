@@ -1,4 +1,4 @@
-def generate_targets():
+def generate_targets(**kwargs):
     return [
         {
             "targets": [

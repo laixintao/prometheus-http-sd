@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 from flask import Flask, jsonify, render_template, request
-from .sd import generate
+from .sd import generate, generate_perf
 from .version import VERSION
 from .config import config
 from prometheus_client import Gauge, Counter, Histogram, Info
@@ -59,6 +59,12 @@ def create_app(prefix):
     # match the rest of the path
     @app.route(f"{prefix}/targets/<path:rest_path>")
     def get_targets(rest_path):
+
+        if request.args.get("debug") == "true":
+            arg_list = dict(request.args)
+            del arg_list["debug"]
+            return generate_perf(config.root_dir, rest_path, **arg_list)
+
         logger.info(
             "request target path: {}, with parameters: {}".format(
                 rest_path,

@@ -7,5 +7,5 @@ def generate_targets(**args):
     ]
 
 
-def test_generate_targets():
+def test_generate_targets(*args, **kwargs):
     return generate_targets(foo="bar")
