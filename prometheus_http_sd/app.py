@@ -96,9 +96,14 @@ def create_app(prefix):
                     l1_dir=l1_dir,
                     l2_dir=l2_dir,
                 ).inc()
-                path_last_generated_targets.labels(path=rest_path).set(
-                    sum(len(t.get("targets", []) or []) for t in targets)
-                )
+                if (
+                    isinstance(targets, list)
+                    and len(targets) > 0
+                    and isinstance(targets[0], dict)
+                ):
+                    path_last_generated_targets.labels(path=rest_path).set(
+                        sum(len(t.get("targets", []) or []) for t in targets)
+                    )
 
                 return jsonify(targets)
 

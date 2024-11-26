@@ -57,7 +57,7 @@ def should_ignore(full_path, ignore_dirs):
                 return True
 
     should_ignore_this = any(
-        p.startswith("_") or p.startswith(".")
+        p.startswith("_") or (p.startswith(".") and p != "..")
         for p in os.path.normpath(full_path).split(os.sep)
     )
 
@@ -112,7 +112,10 @@ def generate(root: str, path: str = "", **extra_args) -> TargetList:
 
     for future in as_completed(futures):
         target_list = future.result()
-        all_targets.extend(target_list)
+        if isinstance(target_list, list):
+            all_targets.extend(target_list)
+        else:
+            all_targets.append(target_list)
 
     return all_targets
 
@@ -169,9 +172,14 @@ def run_generator(generator_path: str, **extra_args) -> TargetList:
                 generator=generator_path, status="success"
             ).inc()
 
-        generator_last_generated_targets.labels(generator=generator_path).set(
-            sum(len(t.get("targets", []) or []) for t in result)
-        )
+        if (
+            isinstance(result, list)
+            and len(result) > 0
+            and isinstance(result[0], dict)
+        ):
+            generator_last_generated_targets.labels(
+                generator=generator_path
+            ).set(sum(len(t.get("targets", []) or []) for t in result))
 
     return result
 
