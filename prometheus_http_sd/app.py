@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 from flask import Flask, jsonify, render_template, request
-from .sd import generate, generate_perf
+from .sd import generate, generate_perf, run_python
 from .version import VERSION
 from .config import config
 from prometheus_client import Gauge, Counter, Histogram, Info
@@ -53,6 +53,15 @@ def create_app(prefix):
             f"{prefix}/metrics": prometheus_wsgi_app,
         },
     )
+
+    # temp solution, return dynamic scape configs from python file.
+    # only support python file, not directory.
+    @app.route(f"{prefix}/scrape_configs/<path:rest_path>")
+    def get_scrape_configs(rest_path):
+        generated = run_python(
+            str(Path(config.root_dir) / (rest_path + ".py")), **request.args
+        )
+        return generated
 
     @app.route(f"{prefix}/targets", defaults={"rest_path": ""})
     @app.route(f"{prefix}/targets/", defaults={"rest_path": ""})
