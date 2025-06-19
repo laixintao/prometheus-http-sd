@@ -7,7 +7,6 @@ from .mem_perf import start_tracing_thread
 from .config import config
 from .validate import validate
 from .app import create_app
-from .sd import py_cache
 
 
 def config_log(level):
@@ -15,7 +14,7 @@ def config_log(level):
     logging.basicConfig(
         level=level,
         format=(
-            "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s -"
+            "[%(asctime)s] %(thread)d {%(filename)s:%(lineno)d} %(levelname)s -"
             " %(message)s"
         ),
         handlers=[stdout_handler],
@@ -58,6 +57,16 @@ def main(log_level):
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
 @click.option(
+    "--cache-dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+)
+@click.option(
+    "--cache-seconds", "-m", default=300, help="Cache expire seconds"
+)
+@click.option(
+    "--cache-refresh-interval",  default=60, help="Cache expire seconds"
+)
+@click.option(
     "--enable-tracer",
     "-v",
     is_flag=True,
@@ -71,26 +80,6 @@ def main(log_level):
         " sentry-sdk"
     ),
 )
-@click.option(
-    "--cache-type",
-    help='Cache of "py_run" function. Can be None or Timeout.',
-    type=click.Choice(["Timeout", "None"]),
-    default="Timeout",
-)
-@click.option(
-    "--cache-opt",
-    help=(
-        "Options pass to the cache object."
-        "Input format should be k=v. ex: timeout=1"
-    ),
-    multiple=True,
-    default=[
-        "timeout=60",
-        "cache_time=60",
-        "name=target_generator",
-        "garbage_collection_count=100",
-    ],
-)
 def serve(
     host,
     port,
@@ -98,10 +87,11 @@ def serve(
     threads,
     url_prefix,
     root_dir,
+    cache_dir,
+    cache_seconds,
+    cache_refresh_interval,
     enable_tracer,
     sentry_url,
-    cache_type,
-    cache_opt,
 ):
     if sentry_url:
         try:
@@ -124,9 +114,8 @@ def serve(
         )
         print("sentry sdk initialized!")
     config.root_dir = root_dir
-    app = create_app(url_prefix)
 
-    setup_cache(cache_type, cache_opt)
+    app = create_app(url_prefix, cache_dir, cache_seconds, cache_refresh_interval)
 
     if enable_tracer:
         start_tracing_thread()
@@ -154,21 +143,6 @@ def serve(
 def check(root_dir, ignore_path):
     config.root_dir = root_dir.rstrip("/")
     validate(root_dir, ignore_dirs=ignore_path)
-
-
-def setup_cache(cache_type, config_opt):
-    kwargs = {}
-    for opt in config_opt:
-        try:
-            key, value = opt.split("=", 1)
-        except ValueError:
-            print(
-                "value format incorrect. required key=value, but get %s" % opt,
-                file=sys.stderr,
-            )
-            sys.exit(127)
-        kwargs[key] = value
-    py_cache.select_decorator(cache_type, **kwargs)
 
 
 if __name__ == "__main__":
