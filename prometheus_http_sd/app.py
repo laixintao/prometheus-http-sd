@@ -1,16 +1,22 @@
-import os
 import logging
+import os
 from pathlib import Path
-
+from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request
-from .sd import generate, generate_perf, run_python
-from .version import VERSION
-from .config import config
-from prometheus_client import Gauge, Counter, Histogram, Info
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from prometheus_client import Counter, Gauge, Histogram, Info
 from prometheus_client import make_wsgi_app
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
+from prometheus_http_sd.dispather import (
+    CacheNotExist,
+    Dispatcher,
+    CacheExpired,
+)
+
+from .config import config
+from .sd import generate_perf, run_python
+from .version import VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +44,7 @@ target_path_request_duration_seconds = Histogram(
 )
 
 
-def create_app(prefix):
+def create_app(prefix, cache_location, cache_seconds, cache_refresh_interval):
     app = Flask(
         __name__,
         template_folder=str(Path(__file__).parent / "templates"),
@@ -53,6 +59,15 @@ def create_app(prefix):
             f"{prefix}/metrics": prometheus_wsgi_app,
         },
     )
+
+    cache_dir = Path(cache_location)
+    dispatcher = Dispatcher(
+        interval=cache_refresh_interval,
+        max_workers=200,
+        cache_location=cache_dir,
+        cache_expire_seconds=cache_seconds,
+    )
+    dispatcher.start_dispatcher()
 
     # temp solution, return dynamic scape configs from python file.
     # only support python file, not directory.
@@ -92,7 +107,50 @@ def create_app(prefix):
             path=rest_path
         ).time():
             try:
-                targets = generate(config.root_dir, rest_path, **request.args)
+                url = request.url
+                targets = dispatcher.get_targets(
+                    rest_path, url, **request.args
+                )
+            except CacheNotExist:
+                target_path_requests_total.labels(
+                    path=rest_path,
+                    status="cache-not-exist",
+                    l1_dir=l1_dir,
+                    l2_dir=l2_dir,
+                ).inc()
+                logger.error("Cache miss, url=%s", request.url)
+                return jsonify({"error": "cache miss"}), 500
+            except CacheExpired as e:
+                target_path_requests_total.labels(
+                    path=rest_path,
+                    status="cache-expired",
+                    l1_dir=l1_dir,
+                    l2_dir=l2_dir,
+                ).inc()
+                updated_timestamp = e.updated_timestamp
+                cache_expire_seconds = e.cache_excepire_seconds
+                dt = datetime.fromtimestamp(updated_timestamp)
+
+                logger.error(
+                    "Cache expired, url=%s, updated_timestamp: %s, cache_expire_seconds: %s (%s)",
+                    request.url,
+                    updated_timestamp,
+                    cache_expire_seconds,
+                    dt,
+                )
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "cache expired, you should try again later"
+                            ),
+                            "updated_timestamp": updated_timestamp,
+                            "updated_time": dt,
+                            "cache_expire_seconds": cache_expire_seconds,
+                        },
+                    ),
+                    500,
+                )
             except:  # noqa: E722
                 target_path_requests_total.labels(
                     path=rest_path, status="fail", l1_dir=l1_dir, l2_dir=l2_dir
