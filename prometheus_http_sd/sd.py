@@ -12,7 +12,6 @@ from typing import Dict, List
 from prometheus_client import Counter, Gauge, Histogram
 import yaml
 
-from prometheus_http_sd.decorator import DecoratorSelector
 from prometheus_http_sd.exceptions import SDResultNotValidException
 
 from .const import TEST_ENV_NAME
@@ -189,10 +188,6 @@ def run_json(file_path: str) -> TargetList:
         return json.load(jsonf)
 
 
-py_cache = DecoratorSelector()
-
-
-@py_cache
 def run_python(generator_path, **extra_args) -> TargetList:
     logger.debug(f"start to import module {generator_path}...")
 
