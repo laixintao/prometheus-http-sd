@@ -64,7 +64,12 @@ def main(log_level):
     "--cache-seconds", "-m", default=300, help="Cache expire seconds"
 )
 @click.option(
-    "--cache-refresh-interval",  default=60, help="Cache expire seconds"
+    "--cache-refresh-interval", default=60, help="Cache expire seconds"
+)
+@click.option(
+    "--update-threads",
+    default=1024,
+    help="Threads to execute user script in the background",
 )
 @click.option(
     "--enable-tracer",
@@ -90,6 +95,7 @@ def serve(
     cache_dir,
     cache_seconds,
     cache_refresh_interval,
+    update_threads,
     enable_tracer,
     sentry_url,
 ):
@@ -115,7 +121,13 @@ def serve(
         print("sentry sdk initialized!")
     config.root_dir = root_dir
 
-    app = create_app(url_prefix, cache_dir, cache_seconds, cache_refresh_interval)
+    app = create_app(
+        url_prefix,
+        cache_dir,
+        cache_seconds,
+        cache_refresh_interval,
+        update_threads,
+    )
 
     if enable_tracer:
         start_tracing_thread()

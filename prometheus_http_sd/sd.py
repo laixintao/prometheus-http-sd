@@ -40,7 +40,7 @@ generator_run_duration_seconds = Histogram(
     "httpsd_generator_run_duration_seconds",
     "The time cost that this generator run",
     ["generator"],
-    buckets=[0.5, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 240, 500, 1000],
+    buckets=[0.5, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 240],
 )
 
 generator_executor = ThreadPoolExecutor(max_workers=400)

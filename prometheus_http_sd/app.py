@@ -44,7 +44,13 @@ target_path_request_duration_seconds = Histogram(
 )
 
 
-def create_app(prefix, cache_location, cache_seconds, cache_refresh_interval):
+def create_app(
+    prefix,
+    cache_location,
+    cache_seconds,
+    cache_refresh_interval,
+    update_threads,
+):
     app = Flask(
         __name__,
         template_folder=str(Path(__file__).parent / "templates"),
@@ -63,7 +69,7 @@ def create_app(prefix, cache_location, cache_seconds, cache_refresh_interval):
     cache_dir = Path(cache_location)
     dispatcher = Dispatcher(
         interval=cache_refresh_interval,
-        max_workers=200,
+        max_workers=update_threads,
         cache_location=cache_dir,
         cache_expire_seconds=cache_seconds,
     )

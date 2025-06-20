@@ -62,6 +62,7 @@ class Dispatcher:
         self.tasks = {}
         self.tasks_lock = threading.Lock()
 
+        logger.info("Create threadpool with workers=%d", max_workers)
         self.threadpool = ThreadPoolExecutor(max_workers=max_workers)
         self.cache_location = cache_location
         self.cache_expire_seconds = cache_expire_seconds
