@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 import threading
 import time
-from prometheus_client import Summary
+from prometheus_client import Counter, Gauge, Summary
 
 
 from .config import config
@@ -14,8 +14,13 @@ from .sd import generate
 logger = logging.getLogger(__name__)
 
 GENERATOR_LATENCY = Summary(
-    "sd_generator_duration_seconds", "Run generator for url time", ["url", "status"]
+    "sd_generator_duration_seconds",
+    "Run generator for full_path time",
+    ["full_path", "status"],
 )
+
+QUEUE_JOB_GAUGE = Gauge("httpsd_update_queue_jobs", "Current jobs pending in the queue", ['status'])
+FINISHED_JOBS = Counter("httpsd_finished_jobs", "Already finished jobs")
 
 
 class CacheNotExist(Exception):
@@ -30,8 +35,8 @@ class CacheExpired(Exception):
 
 
 class Task:
-    def __init__(self, url, path, extra_args) -> None:
-        self.url = url
+    def __init__(self, full_path, path, extra_args) -> None:
+        self.full_path = full_path
         self.path = path
         self.extra_args = extra_args
         self.need_update = True
@@ -55,15 +60,20 @@ class Dispatcher:
     def run_forever(self):
         while True:
             logger.info("Weak up! I start to check all pending tasks...")
-            for url, task in self.tasks.items():
+            counter = 0
+            for full_path, task in self.tasks.items():
                 if task.need_update:
                     if not task.running:
                         task.running = True
-                        logger.info("Put into queue: url=%s", task.url)
+                        logger.info("Put into queue: full_path=%s", task.full_path)
                         self.threadpool.submit(self.update, task)
+                        counter += 1
+                        QUEUE_JOB_GAUGE.labels("pending").inc()
                     task.need_update = False
             logger.info(
-                "All tasks checked, now I sleep %d seconds", self.interval
+                "All tasks checked, %d tasks added, now I sleep %d seconds",
+                counter,
+                self.interval,
             )
             time.sleep(self.interval)
 
@@ -74,45 +84,49 @@ class Dispatcher:
 
     def update(self, task):
         start_time = time.time()
-        logger.info("Task for url=%s started", task.url)
+        logger.info("Task for full_path=%s started", task.full_path)
+        QUEUE_JOB_GAUGE.labels("pending").dec()
+        QUEUE_JOB_GAUGE.labels("running").inc()
         try:
             targets = generate(config.root_dir, task.path, **task.extra_args)
 
             data = {"updated_timestamp": time.time(), "results": targets}
 
-            flocation = self.get_cache_location(task.url)
+            flocation = self.get_cache_location(task.full_path)
             with open(flocation, "w+") as f:
                 json.dump(data, f)
             duration = time.time() - start_time
-            GENERATOR_LATENCY.labels(task.url, "success").observe(duration)
+            GENERATOR_LATENCY.labels(task.full_path, "success").observe(duration)
         except:  # noqa
             duration = time.time() - start_time
-            GENERATOR_LATENCY.labels(task.url, "fail").observe(duration)
-            logger.exception("Error when run for task url=%s", task.url)
+            GENERATOR_LATENCY.labels(task.full_path, "fail").observe(duration)
+            logger.exception("Error when run for task full_path=%s", task.full_path)
         finally:
             duration = time.time() - start_time
             logger.info(
-                "Task for url=%s end, tooke %s",
-                task.url,
+                "Task for full_path=%s end, tooke %s",
+                task.full_path,
                 time.time() - start_time,
             )
             task.running = False
+            QUEUE_JOB_GAUGE.labels("running").dec()
+            FINISHED_JOBS.inc()
 
-    def append_task(self, url, path, extra_args):
-        task = self.tasks.setdefault(url, Task(url, path, extra_args))
+    def append_task(self, full_path, path, extra_args):
+        task = self.tasks.setdefault(full_path, Task(full_path, path, extra_args))
         task.need_update = True
 
-    def _hash_key(self, url) -> str:
-        md5_hash = hashlib.md5(url.encode()).hexdigest()
+    def _hash_key(self, full_path) -> str:
+        md5_hash = hashlib.md5(full_path.encode()).hexdigest()
         return md5_hash
 
-    def get_cache_location(self, url) -> Path:
-        return self.cache_location / self._hash_key(url)
+    def get_cache_location(self, full_path) -> Path:
+        return self.cache_location / self._hash_key(full_path)
 
-    def get_targets(self, path: str, url: str, **extra_args):
-        self.append_task(url, path, extra_args)
+    def get_targets(self, path: str, full_path: str, **extra_args):
+        self.append_task(full_path, path, extra_args)
 
-        cache_file = self.get_cache_location(url)
+        cache_file = self.get_cache_location(full_path)
 
         if not cache_file.exists():
             raise CacheNotExist()

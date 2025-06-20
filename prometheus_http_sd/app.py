@@ -107,9 +107,9 @@ def create_app(prefix, cache_location, cache_seconds, cache_refresh_interval):
             path=rest_path
         ).time():
             try:
-                url = request.url
+                full_path = request.full_path
                 targets = dispatcher.get_targets(
-                    rest_path, url, **request.args
+                    rest_path, full_path, **request.args
                 )
             except CacheNotExist:
                 target_path_requests_total.labels(
@@ -118,7 +118,7 @@ def create_app(prefix, cache_location, cache_seconds, cache_refresh_interval):
                     l1_dir=l1_dir,
                     l2_dir=l2_dir,
                 ).inc()
-                logger.error("Cache miss, url=%s", request.url)
+                logger.error("Cache miss, full_path=%s", request.full_path)
                 return jsonify({"error": "cache miss"}), 500
             except CacheExpired as e:
                 target_path_requests_total.labels(
@@ -132,8 +132,8 @@ def create_app(prefix, cache_location, cache_seconds, cache_refresh_interval):
                 dt = datetime.fromtimestamp(updated_timestamp)
 
                 logger.error(
-                    "Cache expired, url=%s, updated_timestamp: %s, cache_expire_seconds: %s (%s)",
-                    request.url,
+                    "Cache expired, full_path=%s, updated_timestamp: %s, cache_expire_seconds: %s (%s)",
+                    request.full_path,
                     updated_timestamp,
                     cache_expire_seconds,
                     dt,
