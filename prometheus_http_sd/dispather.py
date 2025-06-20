@@ -19,8 +19,14 @@ GENERATOR_LATENCY = Summary(
     ["full_path", "status"],
 )
 
-QUEUE_JOB_GAUGE = Gauge("httpsd_update_queue_jobs", "Current jobs pending in the queue", ['status'])
+QUEUE_JOB_GAUGE = Gauge(
+    "httpsd_update_queue_jobs", "Current jobs pending in the queue", ["status"]
+)
 FINISHED_JOBS = Counter("httpsd_finished_jobs", "Already finished jobs")
+DISPATCHER_STARTED_COUNTER = Counter(
+    "httpsd_dispatcher_started_total",
+    "How many times has the dispatcher has been started?",
+)
 
 
 class CacheNotExist(Exception):
@@ -57,15 +63,28 @@ class Dispatcher:
         self.cache_location = cache_location
         self.cache_expire_seconds = cache_expire_seconds
 
+        self.dispather_thread = None
+
     def run_forever(self):
         while True:
             logger.info("Weak up! I start to check all pending tasks...")
+
+            if (
+                not self.dispather_thread
+                or not self.dispather_thread.is_alive()
+            ):
+                logger.warning("dispatcher thread died! restart it now")
+                self.start_dispatcher()
+
             counter = 0
+            # FIXME copy first
             for full_path, task in self.tasks.items():
                 if task.need_update:
                     if not task.running:
                         task.running = True
-                        logger.info("Put into queue: full_path=%s", task.full_path)
+                        logger.info(
+                            "Put into queue: full_path=%s", task.full_path
+                        )
                         self.threadpool.submit(self.update, task)
                         counter += 1
                         QUEUE_JOB_GAUGE.labels("pending").inc()
@@ -80,7 +99,9 @@ class Dispatcher:
     def start_dispatcher(self):
         thread = threading.Thread(target=self.run_forever, daemon=True)
         thread.start()
+        self.dispather_thread = thread
         logger.info("dispather started")
+        DISPATCHER_STARTED_COUNTER.inc()
 
     def update(self, task):
         start_time = time.time()
@@ -96,11 +117,15 @@ class Dispatcher:
             with open(flocation, "w+") as f:
                 json.dump(data, f)
             duration = time.time() - start_time
-            GENERATOR_LATENCY.labels(task.full_path, "success").observe(duration)
+            GENERATOR_LATENCY.labels(task.full_path, "success").observe(
+                duration
+            )
         except:  # noqa
             duration = time.time() - start_time
             GENERATOR_LATENCY.labels(task.full_path, "fail").observe(duration)
-            logger.exception("Error when run for task full_path=%s", task.full_path)
+            logger.exception(
+                "Error when run for task full_path=%s", task.full_path
+            )
         finally:
             duration = time.time() - start_time
             logger.info(
@@ -113,7 +138,9 @@ class Dispatcher:
             FINISHED_JOBS.inc()
 
     def append_task(self, full_path, path, extra_args):
-        task = self.tasks.setdefault(full_path, Task(full_path, path, extra_args))
+        task = self.tasks.setdefault(
+            full_path, Task(full_path, path, extra_args)
+        )
         task.need_update = True
 
     def _hash_key(self, full_path) -> str:
