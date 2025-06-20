@@ -5,11 +5,17 @@ import logging
 from pathlib import Path
 import threading
 import time
+from prometheus_client import Summary
+
 
 from .config import config
 from .sd import generate
 
 logger = logging.getLogger(__name__)
+
+GENERATOR_LATENCY = Summary(
+    "sd_generator_duration_seconds", "Run generator for url time", ["url", "status"]
+)
 
 
 class CacheNotExist(Exception):
@@ -77,9 +83,14 @@ class Dispatcher:
             flocation = self.get_cache_location(task.url)
             with open(flocation, "w+") as f:
                 json.dump(data, f)
+            duration = time.time() - start_time
+            GENERATOR_LATENCY.labels(task.url, "success").observe(duration)
         except:  # noqa
+            duration = time.time() - start_time
+            GENERATOR_LATENCY.labels(task.url, "fail").observe(duration)
             logger.exception("Error when run for task url=%s", task.url)
         finally:
+            duration = time.time() - start_time
             logger.info(
                 "Task for url=%s end, tooke %s",
                 task.url,
