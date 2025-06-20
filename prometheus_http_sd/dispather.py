@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import copy
 import hashlib
 import json
 import logging
@@ -59,6 +60,8 @@ class Dispatcher:
     ) -> None:
         self.interval = interval
         self.tasks = {}
+        self.tasks_lock = threading.Lock()
+
         self.threadpool = ThreadPoolExecutor(max_workers=max_workers)
         self.cache_location = cache_location
         self.cache_expire_seconds = cache_expire_seconds
@@ -77,8 +80,16 @@ class Dispatcher:
                 self.start_dispatcher()
 
             counter = 0
-            # FIXME copy first
-            for full_path, task in self.tasks.items():
+
+            copy_start = time.time()
+            with self.tasks_lock:
+                task_pool = copy.copy(self.tasks)
+            copy_end = time.time()
+            logger.info(
+                "copy tasks done, took %s seconds", copy_end - copy_start
+            )
+
+            for task in task_pool.values():
                 if task.need_update:
                     if not task.running:
                         task.running = True
@@ -138,9 +149,12 @@ class Dispatcher:
             FINISHED_JOBS.inc()
 
     def append_task(self, full_path, path, extra_args):
-        task = self.tasks.setdefault(
-            full_path, Task(full_path, path, extra_args)
-        )
+        task = self.tasks.get(full_path)
+        if not task:
+            with self.tasks_lock:
+                task = self.tasks.setdefault(
+                    full_path, Task(full_path, path, extra_args)
+                )
         task.need_update = True
 
     def _hash_key(self, full_path) -> str:
