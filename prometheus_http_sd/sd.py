@@ -161,7 +161,9 @@ def run_generator(generator_path: str, **extra_args) -> TargetList:
         try:
             result = executor(generator_path, **extra_args)
             if result is None:
-                raise SDResultNotValidException("Generated result is None")
+                raise SDResultNotValidException(
+                    f"{generator_path} Generated result is None"
+                )
         except:  # noqa: E722
             generator_requests_total.labels(
                 generator=generator_path, status="fail"
