@@ -30,11 +30,19 @@ DISPATCHER_STARTED_COUNTER = Counter(
 )
 
 
-class CacheNotExist(Exception):
+class CacheError(Exception):
+    """Cache is not valid"""
+
+
+class CacheNotValidJson(CacheError):
+    """Cache file is not a valid json"""
+
+
+class CacheNotExist(CacheError):
     """Cache not exist"""
 
 
-class CacheExpired(Exception):
+class CacheExpired(CacheError):
     def __init__(self, updated_timestamp, cache_excepire_seconds) -> None:
         super().__init__("Cache file expired")
         self.updated_timestamp = updated_timestamp
@@ -174,12 +182,21 @@ class Dispatcher:
             raise CacheNotExist()
 
         with open(cache_file) as f:
-            data = json.load(f)
-            updated_timestamp = data["updated_timestamp"]
-            current = time.time()
-            if current - updated_timestamp > self.cache_expire_seconds:
-                raise CacheExpired(
-                    updated_timestamp=updated_timestamp,
-                    cache_excepire_seconds=self.cache_expire_seconds,
+            try:
+                data = json.load(f)
+            except json.decoder.JSONDecodeError:
+                logger.warning(
+                    "Cache file %s is not a valid json, delete it...",
+                    cache_file,
                 )
-            return data["results"]
+                Path(cache_file).unlink()
+                raise CacheNotValidJson()
+
+        updated_timestamp = data["updated_timestamp"]
+        current = time.time()
+        if current - updated_timestamp > self.cache_expire_seconds:
+            raise CacheExpired(
+                updated_timestamp=updated_timestamp,
+                cache_excepire_seconds=self.cache_expire_seconds,
+            )
+        return data["results"]
