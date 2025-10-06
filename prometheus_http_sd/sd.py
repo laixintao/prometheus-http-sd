@@ -6,7 +6,9 @@ import json
 import logging
 import os
 from pathlib import Path
+import threading
 import time
+import traceback
 from typing import Dict, List
 
 from prometheus_client import Counter, Gauge, Histogram
@@ -120,26 +122,118 @@ def generate(root: str, path: str = "", **extra_args) -> TargetList:
     return all_targets
 
 
-def _timed_wrapper(*args, **kwargs):
-    start = time.time()
-    run_generator(*args, **kwargs)
-    return time.time() - start
+class LogCaptureHandler(logging.Handler):
+    """Custom log handler to capture log messages for a specific thread"""
+    def __init__(self, thread_id):
+        super().__init__()
+        self.logs = []
+        self.thread_id = thread_id
+    
+    def emit(self, record):
+        # Only capture logs from the same thread
+        if record.thread == self.thread_id:
+            log_entry = {
+                "timestamp": time.time(),
+                "level": record.levelname,
+                "message": self.format(record),
+                "module": record.module,
+                "funcName": record.funcName,
+                "lineno": record.lineno,
+            }
+            self.logs.append(log_entry)
 
 
-def generate_perf(root: str, path: str = "", **extra_args) -> Dict[str, float]:
+def _debug_wrapper(generator_path, **extra_args):
+    """Wrapper that captures time, output, and logs for a single generator"""
+    # Get current thread ID to filter logs
+    current_thread_id = threading.get_ident()
+    
+    # Create a log capture handler for this specific thread
+    log_handler = LogCaptureHandler(current_thread_id)
+    log_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s'
+    )
+    log_handler.setFormatter(formatter)
+    
+    # Add handler to root logger to capture all logs
+    root_logger = logging.getLogger()
+    original_level = root_logger.level
+    root_logger.addHandler(log_handler)
+    root_logger.setLevel(logging.DEBUG)
+    
+    start_time = time.time()
+    output = None
+    error = None
+    status = "success"
+    
+    try:
+        output = run_generator(generator_path, **extra_args)
+    except Exception as e:
+        error = {
+            "type": type(e).__name__,
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+        }
+        status = "error"
+        logger.exception(f"Error running generator {generator_path}")
+    finally:
+        end_time = time.time()
+        # Remove the handler
+        root_logger.removeHandler(log_handler)
+        root_logger.setLevel(original_level)
+    
+    return {
+        "generator": generator_path,
+        "status": status,
+        "parameters": extra_args,
+        "time_cost_seconds": end_time - start_time,
+        "start_time": start_time,
+        "end_time": end_time,
+        "output": output,
+        "error": error,
+        "logs": log_handler.logs,
+        "target_count": (
+            sum(len(t.get("targets", []) or []) for t in output)
+            if isinstance(output, list) and len(output) > 0 and isinstance(output[0], dict)
+            else (len(output.get("targets", [])) if isinstance(output, dict) else 0)
+        ) if output else 0,
+    }
+
+def generate_debug(root: str, path: str = "", **extra_args) -> Dict:
+    """Enhanced debug mode that captures time, output, and logs"""
     generators = get_generator_list(root, path)
     futures = {}
-    result = {}
-
+    results = []
+    
+    overall_start = time.time()
+    
     for generator in generators:
         futures[generator] = generator_executor.submit(
-            _timed_wrapper, generator, **extra_args
+            _debug_wrapper, generator, **extra_args
         )
-
+    
     for generator, future in futures.items():
-        time_cost = future.result()
-        result[generator] = time_cost
-    return {"generator_run_seconds": result}
+        result = future.result()
+        results.append(result)
+    
+    overall_end = time.time()
+    
+    # Calculate summary statistics
+    total_targets = sum(r["target_count"] for r in results)
+    successful_generators = sum(1 for r in results if r["status"] == "success")
+    failed_generators = sum(1 for r in results if r["status"] == "error")
+    
+    return {
+        "path": path,
+        "url_parameters": extra_args,
+        "overall_time_seconds": overall_end - overall_start,
+        "total_generators": len(results),
+        "successful_generators": successful_generators,
+        "failed_generators": failed_generators,
+        "total_targets": total_targets,
+        "generators": results,
+    }
 
 
 def run_generator(generator_path: str, **extra_args) -> TargetList:

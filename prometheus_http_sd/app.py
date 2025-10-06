@@ -15,7 +15,7 @@ from prometheus_http_sd.dispather import (
 )
 
 from .config import config
-from .sd import generate_perf, run_python
+from .sd import generate_debug, run_python
 from .version import VERSION
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def create_app(
         if request.args.get("debug") == "true":
             arg_list = dict(request.args)
             del arg_list["debug"]
-            return generate_perf(config.root_dir, rest_path, **arg_list)
+            return jsonify(generate_debug(config.root_dir, rest_path, **arg_list))
 
         logger.info(
             "request target path: {}, with parameters: {}".format(
