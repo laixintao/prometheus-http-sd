@@ -207,7 +207,7 @@ def create_server_app(prefix, cache_seconds):
                     f"/targets/{rest_path}?{query_string}"
                 )
             else:
-                full_path_without_debug = f"/targets/{rest_path}"
+                full_path_without_debug = f"/targets/{rest_path}?"
 
             debug_info = dispatcher.get_debug_info(full_path_without_debug)
 

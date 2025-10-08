@@ -297,9 +297,20 @@ def worker_only(
 
     worker_pool.start()
 
+    # Set up signal handlers
+    import signal
+    
+    def signal_handler(signum, frame):
+        logger.info(f"Received signal {signum}, shutting down...")
+        worker_pool.stop()
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     try:
         worker_pool.wait()
     except KeyboardInterrupt:
+        # Fallback for any remaining KeyboardInterrupt cases
         logger.info("Received interrupt signal, shutting down...")
         worker_pool.stop()
 
