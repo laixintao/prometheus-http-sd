@@ -1,6 +1,7 @@
 from pathlib import Path
 import time
 
+
 def test_app_target_with_parameters(client):
     from prometheus_http_sd.config import config
     import json
