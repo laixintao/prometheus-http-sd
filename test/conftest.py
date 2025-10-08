@@ -1,10 +1,11 @@
 import pytest
 from prometheus_http_sd.app import create_app
-
+from pathlib import Path
 
 @pytest.fixture()
 def app():
-    app = create_app("/")
+    cache_dir = str(Path(__file__).parent)
+    app = create_app("/", cache_dir, 300, 1, 1024)
     app.config.update(
         {
             "TESTING": True,
