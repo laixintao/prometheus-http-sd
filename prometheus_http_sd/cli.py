@@ -14,8 +14,8 @@ def config_log(level):
     logging.basicConfig(
         level=level,
         format=(
-            "[%(asctime)s] %(thread)d {%(filename)s:%(lineno)d} %(levelname)s -"
-            " %(message)s"
+            "[%(asctime)s] %(thread)d {%(filename)s:%(lineno)d} "
+            "%(levelname)s - %(message)s"
         ),
         handlers=[stdout_handler],
     )
@@ -192,29 +192,38 @@ def check(root_dir, ignore_path):
     default=20,
     help="Python logging level (0-50)",
 )
-def server_only(host, port, connection_limit, threads, url_prefix, root_dir, cache_seconds, redis_url, log_level):
-    """Start a server-only instance that handles HTTP requests and enqueues jobs."""
+def server_only(
+    host,
+    port,
+    connection_limit,
+    threads,
+    url_prefix,
+    root_dir,
+    cache_seconds,
+    redis_url,
+    log_level,
+):
     # Configure logging
     config_log(log_level)
-    
+
     from .config import config
     from .redis.server import create_server_app
-    
+
     # Initialize config
     config.__init__()
     config.root_dir = root_dir
     config.redis_url = redis_url
     config.cache_expire_seconds = cache_seconds
-    
+
     app = create_server_app(
         url_prefix,
         cache_seconds,
     )
-    
+
     logger = logging.getLogger(__name__)
     logger.info(f"Starting server-only instance on {host}:{port}")
     logger.info("Workers must be started separately to process jobs.")
-    
+
     waitress.serve(
         app,
         host=host,
@@ -254,33 +263,40 @@ def server_only(host, port, connection_limit, threads, url_prefix, root_dir, cac
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
-def worker_only(worker_id, num_workers, redis_url, log_level, metrics_port, root_dir):
+def worker_only(
+    worker_id, num_workers, redis_url, log_level, metrics_port, root_dir
+):
     """Start a worker-only instance that processes jobs from Redis queue."""
     # Configure logging
     config_log(log_level)
-    
+
     from .config import config
     from .redis.worker import WorkerPool
-    
+
     # Initialize config
     config.__init__()
     config.root_dir = root_dir
     config.redis_url = redis_url
-    
+
     # Use WorkerPool for both single worker and multiple workers
     num_workers = 1 if worker_id else num_workers
-    worker_pool = WorkerPool(num_workers, first_worker_id=worker_id, metrics_port=metrics_port)
+    worker_pool = WorkerPool(
+        num_workers, first_worker_id=worker_id, metrics_port=metrics_port
+    )
     logger = logging.getLogger(__name__)
 
     if worker_id:
         logger.info(f"Starting single worker: {worker_id}")
     else:
         logger.info(f"Starting worker pool with {num_workers} workers")
-    
-    logger.info(f"Worker metrics will be available at http://localhost:{metrics_port}/metrics")
+
+    logger.info(
+        f"Worker metrics will be available at "
+        f"http://localhost:{metrics_port}/metrics"
+    )
 
     worker_pool.start()
-    
+
     try:
         worker_pool.wait()
     except KeyboardInterrupt:

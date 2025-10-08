@@ -37,15 +37,10 @@ generator_latency = Summary(
 
 # Queue metrics
 queue_job_gauge = Gauge(
-    "httpsd_update_queue_jobs", 
-    "Current jobs pending in the queue", 
-    ["status"]
+    "httpsd_update_queue_jobs", "Current jobs pending in the queue", ["status"]
 )
 
-finished_jobs = Counter(
-    "httpsd_finished_jobs", 
-    "Already finished jobs"
-)
+finished_jobs = Counter("httpsd_finished_jobs", "Already finished jobs")
 
 dispatcher_started_counter = Counter(
     "httpsd_dispatcher_started_total",

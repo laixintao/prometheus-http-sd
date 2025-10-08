@@ -8,4 +8,5 @@ class Config:
         self.redis_url = "redis://localhost:6379/0"
         self.cache_expire_seconds = 300
 
+
 config = Config()

@@ -18,14 +18,18 @@ from .metrics import (
 
 logger = logging.getLogger(__name__)
 
+
 class CacheError(Exception):
     """Cache is not valid"""
+
 
 class CacheNotValidJson(CacheError):
     """Cache file is not a valid json"""
 
+
 class CacheNotExist(CacheError):
     """Cache not exist"""
+
 
 class CacheExpired(CacheError):
     def __init__(self, updated_timestamp, cache_excepire_seconds) -> None:

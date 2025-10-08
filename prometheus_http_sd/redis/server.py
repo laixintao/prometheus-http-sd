@@ -8,7 +8,7 @@ from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 from ..config import config
-from ..sd import generate_perf, run_python
+from ..sd import run_python
 from ..version import VERSION
 from .cache import RedisCache
 from .queue import RedisJobQueue
@@ -22,23 +22,28 @@ from ..metrics import (
 logger = logging.getLogger(__name__)
 
 
-class ServerDispatcher:    
+class ServerDispatcher:
     def __init__(self, cache_expire_seconds: int):
         self.cache_expire_seconds = cache_expire_seconds
         self.cache = RedisCache(config.redis_url)
         self.queue = RedisJobQueue(config.redis_url)
-    
-    def _enqueue_job(self, full_path: str, path: str, extra_args: dict, reason: str = ""):
+
+    def _enqueue_job(
+        self, full_path: str, path: str, extra_args: dict, reason: str = ""
+    ):
         if self.queue.is_job_queued_or_processing(full_path):
-            logger.info(f"Job already queued/processing for {full_path}, skipping duplicate")
+            logger.info(
+                f"Job already queued/processing for {full_path}, "
+                f"skipping duplicate"
+            )
             return
-        
+
         job_data = {
             "full_path": full_path,
             "path": path,
-            "extra_args": extra_args
+            "extra_args": extra_args,
         }
-        
+
         if self.queue.is_available():
             if self.queue.enqueue_job(job_data):
                 log_msg = f"Enqueued job for {full_path}"
@@ -48,8 +53,11 @@ class ServerDispatcher:
             else:
                 logger.error(f"Failed to enqueue job for {full_path}")
         else:
-            logger.warning(f"Redis queue not available, cannot enqueue job for {full_path}")
-    
+            logger.warning(
+                f"Redis queue not available, cannot enqueue job for "
+                f"{full_path}"
+            )
+
     def get_targets(self, path: str, full_path: str, **extra_args):
         if self.cache.is_available():
             data = self.cache.get(full_path)
@@ -60,18 +68,23 @@ class ServerDispatcher:
                     logger.info(f"Cache hit for {full_path}")
                     return data["results"]
                 else:
-                    logger.info(f"Cache expired for {full_path} (age: {current - updated_timestamp:.1f}s)")
+                    logger.info(
+                        f"Cache expired for {full_path} "
+                        f"(age: {current - updated_timestamp:.1f}s)"
+                    )
                     # Enqueue new job to refresh expired cache
-                    self._enqueue_job(full_path, path, extra_args, "cache expired")
+                    self._enqueue_job(
+                        full_path, path, extra_args, "cache expired"
+                    )
                     raise CacheExpired(
                         updated_timestamp=updated_timestamp,
                         cache_excepire_seconds=self.cache_expire_seconds,
                     )
-        
+
         # Cache miss - enqueue job for workers to process
         self._enqueue_job(full_path, path, extra_args, "cache miss")
         raise CacheNotExist()
-    
+
     def get_debug_info(self, full_path: str):
         """Get debug information for failed jobs and normal cache results."""
         if not self.cache.is_available():
@@ -79,57 +92,77 @@ class ServerDispatcher:
             return None
 
         debug_info = {}
-        
+
         # Check for error cache
         error_cache_key = f"error:{full_path}"
-        logger.debug(f"Looking for error debug info with key: {error_cache_key}")
-        
+        logger.debug(
+            f"Looking for error debug info with key: {error_cache_key}"
+        )
+
         error_data = self.cache.get(error_cache_key)
         logger.debug(f"Error cache data: {error_data}")
-        
+
         if error_data and error_data.get("status") == "error":
             error_details = error_data.get("error_details", {})
             # Add human-readable timestamp if available
             if "timestamp" in error_details:
                 try:
-                    error_details["timestamp_human"] = datetime.fromisoformat(error_details["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+                    error_details["timestamp_human"] = datetime.fromisoformat(
+                        error_details["timestamp"]
+                    ).strftime("%Y-%m-%d %H:%M:%S")
                 except (ValueError, TypeError):
-                    error_details["timestamp_human"] = error_details["timestamp"]
+                    error_details["timestamp_human"] = error_details[
+                        "timestamp"
+                    ]
             debug_info["error_details"] = error_details
-        
+
         # Check for normal cache result
         normal_cache_data = self.cache.get(full_path)
         logger.debug(f"Normal cache data: {normal_cache_data}")
-        
+
         if normal_cache_data:
             updated_timestamp = normal_cache_data.get("updated_timestamp")
-            cache_age_seconds = time.time() - updated_timestamp if updated_timestamp else None
-            
+            cache_age_seconds = (
+                time.time() - updated_timestamp if updated_timestamp else None
+            )
+
             debug_info["normal_cache"] = {
                 "status": "success",
-                "updated_timestamp": datetime.fromtimestamp(updated_timestamp).isoformat() if updated_timestamp else None,
+                "updated_timestamp": (
+                    datetime.fromtimestamp(updated_timestamp).isoformat()
+                    if updated_timestamp
+                    else None
+                ),
                 "results": normal_cache_data.get("results"),
-                "cache_age_seconds": f"{cache_age_seconds:.1f}s ago" if cache_age_seconds else None
+                "cache_age_seconds": (
+                    f"{cache_age_seconds:.1f}s ago"
+                    if cache_age_seconds
+                    else None
+                ),
             }
 
         if debug_info:
             return debug_info
-        
+
         return None
 
     def is_job_processing(self, full_path: str):
         if not self.queue.is_available():
             return False
-        
+
         return self.queue.is_job_queued_or_processing(full_path)
+
 
 def create_server_app(prefix, cache_seconds):
     """Create Flask application for server-only mode."""
     import os
+
     # Get the template folder path relative to this file
-    template_folder = os.path.join(os.path.dirname(__file__), '..', 'templates')
+    template_folder = os.path.join(
+        os.path.dirname(__file__), "..", "templates"
+    )
     app = Flask(__name__, template_folder=template_folder)
-    
+
     # Initialize dispatcher
     dispatcher = ServerDispatcher(cache_seconds)
 
@@ -145,7 +178,7 @@ def create_server_app(prefix, cache_seconds):
                         paths.append(item.name)
         except Exception as e:
             logger.error(f"Error listing paths: {e}")
-        
+
         return render_template(
             "admin.html", prefix=prefix, paths=paths, version=VERSION
         )
@@ -163,40 +196,59 @@ def create_server_app(prefix, cache_seconds):
     def get_targets(rest_path):
         if request.args.get("debug") == "true":
             from urllib.parse import urlencode
+
             arg_list = dict(request.args)
-            if 'debug' in arg_list:
+            if "debug" in arg_list:
                 del arg_list["debug"]
-            
+
             if arg_list:
                 query_string = urlencode(arg_list, doseq=True)
-                full_path_without_debug = f"/targets/{rest_path}?{query_string}"
+                full_path_without_debug = (
+                    f"/targets/{rest_path}?{query_string}"
+                )
             else:
                 full_path_without_debug = f"/targets/{rest_path}"
-            
+
             debug_info = dispatcher.get_debug_info(full_path_without_debug)
-            
+
             # Add debugging information about what paths we're checking
             debug_response = {
                 "requested_path": full_path_without_debug,
-                "debug_info": debug_info
+                "debug_info": debug_info,
             }
-            
-            if debug_info:                
+
+            if debug_info:
                 return jsonify(debug_response)
             else:
                 # No error cache found, check if job is being processed
-                is_processing = dispatcher.is_job_processing(full_path_without_debug)
-                
+                is_processing = dispatcher.is_job_processing(
+                    full_path_without_debug
+                )
+
                 if is_processing:
-                    return jsonify({
-                        "status": "processing",
-                        "message": "Job is currently being processed by a worker. Please wait a moment and try again.",
-                        "suggestion": "Wait a few seconds and retry with ?debug=true"
-                    })
+                    return jsonify(
+                        {
+                            "status": "processing",
+                            "message": (
+                                "Job is currently being processed by a "
+                                "worker. "
+                                "Please wait a moment and try again."
+                            ),
+                            "suggestion": (
+                                "Wait a few seconds and retry with ?debug=true"
+                            ),
+                        }
+                    )
                 else:
                     debug_response["status"] = "no_debug_info"
-                    debug_response["message"] = "No error information available yet. Please trigger job processing first."
-                    debug_response["suggestion"] = "Try the request without ?debug=true first to trigger job processing, then retry with ?debug=true"
+                    debug_response["message"] = (
+                        "No error information available yet. "
+                        "Please trigger job processing first."
+                    )
+                    debug_response["suggestion"] = (
+                        "Try the request without ?debug=true first to trigger "
+                        "job processing, then retry with ?debug=true"
+                    )
                     return jsonify(debug_response)
 
         logger.info(
@@ -252,7 +304,9 @@ def create_server_app(prefix, cache_seconds):
                     l1_dir=l1_dir,
                     l2_dir=l2_dir,
                 ).inc()
-                logger.error("Exception on %s [%s]", request.full_path, request.method)
+                logger.error(
+                    "Exception on %s [%s]", request.full_path, request.method
+                )
                 logger.exception(e)
                 return jsonify({"error": str(e)}), 500
 

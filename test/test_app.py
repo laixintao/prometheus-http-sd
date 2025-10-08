@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import time
 
 def test_app_target_with_parameters(client):
     from prometheus_http_sd.config import config
@@ -8,7 +8,15 @@ def test_app_target_with_parameters(client):
     config.root_dir = str(Path(__file__).parent / "app_root")
 
     response = client.get("/targets/echo_target?domain=example.com&info=test")
+
+    # first hit will always cache miss
+    assert response.status_code == 500
+
+    time.sleep(5)
+    response = client.get("/targets/echo_target?domain=example.com&info=test")
+    # should be a cache hit
     assert response.status_code == 200
+
     body = json.loads(response.data.decode("utf-8"))
     assert body == [
         {

@@ -11,11 +11,13 @@ class RedisCache:
         self.redis_url = redis_url
         self._redis_client = None
         self._connected = False
-    
+
     def _connect(self):
         if not self._connected:
             try:
-                self._redis_client = redis.from_url(self.redis_url, decode_responses=True)
+                self._redis_client = redis.from_url(
+                    self.redis_url, decode_responses=True
+                )
                 # Test connection
                 self._redis_client.ping()
                 self._connected = True
@@ -23,7 +25,7 @@ class RedisCache:
             except Exception as e:
                 logger.error(f"Failed to connect to Redis: {e}")
                 raise
-    
+
     def is_available(self) -> bool:
         try:
             if not self._connected:
@@ -31,12 +33,12 @@ class RedisCache:
             return self._redis_client.ping()
         except Exception:
             return False
-    
+
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         try:
             if not self._connected:
                 self._connect()
-            
+
             data = self._redis_client.get(key)
             if data:
                 return json.loads(data)
@@ -44,39 +46,43 @@ class RedisCache:
         except Exception as e:
             logger.error(f"Failed to get cache data for key {key}: {e}")
             return None
-    
-    def set(self, key: str, data: Dict[str, Any], expire_seconds: int = 300) -> bool:
+
+    def set(
+        self, key: str, data: Dict[str, Any], expire_seconds: int = 300
+    ) -> bool:
         try:
             if not self._connected:
                 self._connect()
-            
+
             json_data = json.dumps(data)
             result = self._redis_client.setex(key, expire_seconds, json_data)
-            logger.debug(f"Cached data for key {key} with {expire_seconds}s expiration")
+            logger.debug(
+                f"Cached data for key {key} with {expire_seconds}s expiration"
+            )
             return result
         except Exception as e:
             logger.error(f"Failed to set cache data for key {key}: {e}")
             return False
-    
+
     def delete(self, key: str) -> bool:
         """Delete cached data for a key."""
         try:
             if not self._connected:
                 self._connect()
-            
+
             result = self._redis_client.delete(key)
             logger.debug(f"Deleted cache data for key {key}")
             return bool(result)
         except Exception as e:
             logger.error(f"Failed to delete cache data for key {key}: {e}")
             return False
-    
+
     def exists(self, key: str) -> bool:
         """Check if a key exists in cache."""
         try:
             if not self._connected:
                 self._connect()
-            
+
             return bool(self._redis_client.exists(key))
         except Exception as e:
             logger.error(f"Failed to check existence of key {key}: {e}")

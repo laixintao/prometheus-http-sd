@@ -2,6 +2,7 @@ import pytest
 from prometheus_http_sd.app import create_app
 from pathlib import Path
 
+
 @pytest.fixture()
 def app():
     cache_dir = str(Path(__file__).parent)

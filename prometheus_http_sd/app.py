@@ -17,10 +17,10 @@ from .config import config
 from .sd import generate_perf, run_python
 from .metrics import (
     path_last_generated_targets,
-    version_info,
     target_path_requests_total,
     target_path_request_duration_seconds,
 )
+from .version import VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,8 @@ def create_app(
                 dt = datetime.fromtimestamp(updated_timestamp)
 
                 logger.error(
-                    "Cache expired, full_path=%s, updated_timestamp: %s, cache_expire_seconds: %s (%s)",
+                    "Cache expired, full_path=%s, updated_timestamp: %s, "
+                    "cache_expire_seconds: %s (%s)",
                     request.full_path,
                     updated_timestamp,
                     cache_expire_seconds,
