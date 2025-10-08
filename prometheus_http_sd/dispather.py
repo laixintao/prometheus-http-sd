@@ -6,41 +6,26 @@ import logging
 from pathlib import Path
 import threading
 import time
-from prometheus_client import Counter, Gauge, Summary
-
 
 from .config import config
 from .sd import generate
+from .metrics import (
+    generator_latency,
+    queue_job_gauge,
+    finished_jobs,
+    dispatcher_started_counter,
+)
 
 logger = logging.getLogger(__name__)
-
-GENERATOR_LATENCY = Summary(
-    "sd_generator_duration_seconds",
-    "Run generator for full_path time",
-    ["full_path", "status"],
-)
-
-QUEUE_JOB_GAUGE = Gauge(
-    "httpsd_update_queue_jobs", "Current jobs pending in the queue", ["status"]
-)
-FINISHED_JOBS = Counter("httpsd_finished_jobs", "Already finished jobs")
-DISPATCHER_STARTED_COUNTER = Counter(
-    "httpsd_dispatcher_started_total",
-    "How many times has the dispatcher has been started?",
-)
-
 
 class CacheError(Exception):
     """Cache is not valid"""
 
-
 class CacheNotValidJson(CacheError):
     """Cache file is not a valid json"""
 
-
 class CacheNotExist(CacheError):
     """Cache not exist"""
-
 
 class CacheExpired(CacheError):
     def __init__(self, updated_timestamp, cache_excepire_seconds) -> None:
@@ -107,7 +92,7 @@ class Dispatcher:
                         )
                         self.threadpool.submit(self.update, task)
                         counter += 1
-                        QUEUE_JOB_GAUGE.labels("pending").inc()
+                        queue_job_gauge.labels("pending").inc()
                     task.need_update = False
             logger.info(
                 "All tasks checked, %d tasks added, now I sleep %d seconds",
@@ -121,13 +106,13 @@ class Dispatcher:
         thread.start()
         self.dispather_thread = thread
         logger.info("dispather started")
-        DISPATCHER_STARTED_COUNTER.inc()
+        dispatcher_started_counter.inc()
 
     def update(self, task):
         start_time = time.time()
         logger.info("Task for full_path=%s started", task.full_path)
-        QUEUE_JOB_GAUGE.labels("pending").dec()
-        QUEUE_JOB_GAUGE.labels("running").inc()
+        queue_job_gauge.labels("pending").dec()
+        queue_job_gauge.labels("running").inc()
         try:
             targets = generate(config.root_dir, task.path, **task.extra_args)
 
@@ -137,12 +122,12 @@ class Dispatcher:
             with open(flocation, "w+") as f:
                 json.dump(data, f)
             duration = time.time() - start_time
-            GENERATOR_LATENCY.labels(task.full_path, "success").observe(
+            generator_latency.labels(task.full_path, "success").observe(
                 duration
             )
         except:  # noqa
             duration = time.time() - start_time
-            GENERATOR_LATENCY.labels(task.full_path, "fail").observe(duration)
+            generator_latency.labels(task.full_path, "fail").observe(duration)
             logger.exception(
                 "Error when run for task full_path=%s", task.full_path
             )
@@ -154,8 +139,8 @@ class Dispatcher:
                 time.time() - start_time,
             )
             task.running = False
-            QUEUE_JOB_GAUGE.labels("running").dec()
-            FINISHED_JOBS.inc()
+            queue_job_gauge.labels("running").dec()
+            finished_jobs.inc()
 
     def append_task(self, full_path, path, extra_args):
         task = self.tasks.get(full_path)
