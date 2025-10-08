@@ -12,7 +12,7 @@ def test_app_target_with_parameters(client):
     # first hit will always cache miss
     assert response.status_code == 500
 
-    time.sleep(5)
+    time.sleep(10)
     response = client.get("/targets/echo_target?domain=example.com&info=test")
     # should be a cache hit
     assert response.status_code == 200
