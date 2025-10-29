@@ -4,7 +4,6 @@ from pathlib import Path
 from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request
-from prometheus_client import Counter, Gauge, Histogram, Info
 from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
@@ -16,32 +15,14 @@ from prometheus_http_sd.dispather import (
 
 from .config import config
 from .sd import generate_perf, run_python
+from .metrics import (
+    path_last_generated_targets,
+    target_path_requests_total,
+    target_path_request_duration_seconds,
+)
 from .version import VERSION
 
 logger = logging.getLogger(__name__)
-
-
-path_last_generated_targets = Gauge(
-    "httpsd_path_last_generated_targets",
-    "Generated targets count in last request",
-    ["path"],
-)
-version_info = Info(
-    "httpsd_version",
-    "prometheus_http_sd version info",
-)
-version_info.info({"version": VERSION})
-target_path_requests_total = Counter(
-    "httpsd_path_requests_total",
-    "The total count of a path being requested, status label can be"
-    " success/fail",
-    ["path", "status", "l1_dir", "l2_dir"],
-)
-target_path_request_duration_seconds = Histogram(
-    "httpsd_target_path_request_duration_seconds",
-    "The bucket of request duration in seconds",
-    ["path"],
-)
 
 
 def create_app(
@@ -138,7 +119,8 @@ def create_app(
                 dt = datetime.fromtimestamp(updated_timestamp)
 
                 logger.error(
-                    "Cache expired, full_path=%s, updated_timestamp: %s, cache_expire_seconds: %s (%s)",
+                    "Cache expired, full_path=%s, updated_timestamp: %s, "
+                    "cache_expire_seconds: %s (%s)",
                     request.full_path,
                     updated_timestamp,
                     cache_expire_seconds,

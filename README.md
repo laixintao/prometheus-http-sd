@@ -20,6 +20,8 @@ framework.
     - [Timeout](#timeout)
     - [None](#none)
   - [Sentry APM](#sentry-apm)
+- [Debug Your Scripts](#debug-your-scripts)
+- [Redis-Based Architecture](#redis-based-architecture)
 - [Define your targets](#define-your-targets)
   - [Your target generator](#your-target-generator)
   - [The Target Path](#the-target-path)
@@ -440,6 +442,8 @@ prometheus-http-sd.
 
 ## Debug Your Scripts
 
+### Monolithic Mode
+
 Debug script latency.
 
 You can add `?debug=true` at the end of your target url to see the time
@@ -451,6 +455,64 @@ For example:
 curl http://127.0.0.1:8080/targets/echo_target\?debug\=true
 {"generator_run_seconds":{"./test/app_root/echo_target/sleep2_target.py":2.005011796951294,"./test/app_root/echo_target/sleep_target.py":3.00480318069458,"./test/app_root/echo_target/target.py":0.0009987354278564453}}
 ```
+
+### Redis-Based Architecture
+
+For the Redis-based architecture (server + workers), the debug feature provides detailed information about job status, errors, and cache state.
+
+**Quick Start:**
+```bash
+# Add ?debug=true to see job processing status and error details
+curl http://127.0.0.1:8080/targets/my-service?debug=true
+```
+
+**What Debug Shows:**
+- Job processing status (pending, processing, completed)
+- Error details with full tracebacks when generation fails
+- Cache status and timing information
+- Suggestions for troubleshooting
+
+For detailed documentation, see [Debug Guide](./docs/debug-guide.md).
+
+## Redis-Based Architecture
+
+The Redis-based architecture splits the application into separate server and worker components for better scalability and reliability.
+
+**Key Features:**
+- Horizontal scaling of servers and workers
+- Persistent job queue with Redis
+- Cache-based target serving
+- Detailed debug information
+- Comprehensive metrics
+
+**Quick Start:**
+```bash
+# Terminal 1: Start Redis
+redis-server
+
+# Terminal 2: Start server
+prometheus-http-sd server-only \
+  --host 0.0.0.0 \
+  --port 8080 \
+  --redis-url redis://localhost:6379/0 \
+  /path/to/targets
+
+# Terminal 3: Start workers
+prometheus-http-sd worker-only \
+  --num-workers 4 \
+  --redis-url redis://localhost:6379/0 \
+  /path/to/targets
+```
+
+**Documentation:**
+- [Redis Architecture Guide](./docs/redis-architecture.md)
+- [Debug Guide](./docs/debug-guide.md)
+
+**Debugging:**
+- Add `?debug=true` to requests for job status and error details
+- Monitor Prometheus metrics for cache hits/misses
+- Check Redis queue lengths for bottlenecks
+- See [Debug Guide](./docs/debug-guide.md) for detailed troubleshooting
 
 ## Best Practice
 
