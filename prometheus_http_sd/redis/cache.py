@@ -29,7 +29,6 @@ class RedisCache:
         )
         return result
 
-
     def delete(self, key: str) -> bool:
         """Delete cached data for a key."""
         result = self._redis_client.delete(key)

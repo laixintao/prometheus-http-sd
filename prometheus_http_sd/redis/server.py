@@ -53,7 +53,6 @@ class ServerDispatcher:
         else:
             logger.error(f"Failed to enqueue job for {full_path}")
 
-
     def get_targets(self, path: str, full_path: str, **extra_args):
         data = self.cache.get(full_path)
         if data:
@@ -142,6 +141,7 @@ class ServerDispatcher:
 
     def is_job_processing(self, full_path: str):
         return self.queue.is_job_queued_or_processing(full_path)
+
 
 def create_server_app(prefix, cache_seconds):
     """Create Flask application for server-only mode."""
