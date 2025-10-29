@@ -42,6 +42,13 @@ queue_job_gauge = Gauge(
 
 finished_jobs = Counter("httpsd_finished_jobs", "Already finished jobs")
 
+# Cache metrics
+cache_operations = Counter(
+    "httpsd_cache_operations_total",
+    "Total cache operations",
+    ["operation"],
+)
+
 dispatcher_started_counter = Counter(
     "httpsd_dispatcher_started_total",
     "How many times has the dispatcher has been started?",

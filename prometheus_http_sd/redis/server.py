@@ -14,6 +14,7 @@ from .cache import RedisCache
 from .queue import RedisJobQueue
 from ..dispather import CacheNotExist, CacheExpired
 from ..metrics import (
+    cache_operations,
     path_last_generated_targets,
     target_path_requests_total,
     target_path_request_duration_seconds,
@@ -44,53 +45,46 @@ class ServerDispatcher:
             "extra_args": extra_args,
         }
 
-        if self.queue.is_available():
-            if self.queue.enqueue_job(job_data):
-                log_msg = f"Enqueued job for {full_path}"
-                if reason:
-                    log_msg += f" ({reason})"
-                logger.info(log_msg)
-            else:
-                logger.error(f"Failed to enqueue job for {full_path}")
+        if self.queue.enqueue_job(job_data):
+            log_msg = f"Enqueued job for {full_path}"
+            if reason:
+                log_msg += f" ({reason})"
+            logger.info(log_msg)
         else:
-            logger.warning(
-                f"Redis queue not available, cannot enqueue job for "
-                f"{full_path}"
-            )
+            logger.error(f"Failed to enqueue job for {full_path}")
+
 
     def get_targets(self, path: str, full_path: str, **extra_args):
-        if self.cache.is_available():
-            data = self.cache.get(full_path)
-            if data:
-                updated_timestamp = data["updated_timestamp"]
-                current = datetime.now().timestamp()
-                if current - updated_timestamp <= self.cache_expire_seconds:
-                    logger.info(f"Cache hit for {full_path}")
-                    return data["results"]
-                else:
-                    logger.info(
-                        f"Cache expired for {full_path} "
-                        f"(age: {current - updated_timestamp:.1f}s)"
-                    )
-                    # Enqueue new job to refresh expired cache
-                    self._enqueue_job(
-                        full_path, path, extra_args, "cache expired"
-                    )
-                    raise CacheExpired(
-                        updated_timestamp=updated_timestamp,
-                        cache_excepire_seconds=self.cache_expire_seconds,
-                    )
+        data = self.cache.get(full_path)
+        if data:
+            updated_timestamp = data["updated_timestamp"]
+            current = datetime.now().timestamp()
+            if current - updated_timestamp <= self.cache_expire_seconds:
+                logger.info(f"Cache hit for {full_path}")
+                cache_operations.labels(operation="hit").inc()
+                return data["results"]
+            else:
+                logger.info(
+                    f"Cache expired for {full_path} "
+                    f"(age: {current - updated_timestamp:.1f}s)"
+                )
+                cache_operations.labels(operation="expired").inc()
+                # Enqueue new job to refresh expired cache
+                self._enqueue_job(
+                    full_path, path, extra_args, "cache expired"
+                )
+                raise CacheExpired(
+                    updated_timestamp=updated_timestamp,
+                    cache_excepire_seconds=self.cache_expire_seconds,
+                )
 
         # Cache miss - enqueue job for workers to process
+        cache_operations.labels(operation="miss").inc()
         self._enqueue_job(full_path, path, extra_args, "cache miss")
         raise CacheNotExist()
 
     def get_debug_info(self, full_path: str):
         """Get debug information for failed jobs and normal cache results."""
-        if not self.cache.is_available():
-            logger.debug("Cache not available for debug info")
-            return None
-
         debug_info = {}
 
         # Check for error cache
@@ -147,11 +141,7 @@ class ServerDispatcher:
         return None
 
     def is_job_processing(self, full_path: str):
-        if not self.queue.is_available():
-            return False
-
         return self.queue.is_job_queued_or_processing(full_path)
-
 
 def create_server_app(prefix, cache_seconds):
     """Create Flask application for server-only mode."""

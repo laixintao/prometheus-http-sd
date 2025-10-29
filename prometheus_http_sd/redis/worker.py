@@ -25,8 +25,9 @@ logger = logging.getLogger(__name__)
 class WorkerMetricsServer:
     """Flask-based server to expose worker metrics."""
 
-    def __init__(self, port: int = 8081):
+    def __init__(self, port: int = 8081, host: str = "0.0.0.0"):
         self.port = port
+        self.host = host
         self.app = None
         self.thread = None
         self.running = False
@@ -65,7 +66,7 @@ class WorkerMetricsServer:
             # Start Flask app in a separate thread
             self.thread = threading.Thread(
                 target=lambda: self.app.run(
-                    host="0.0.0.0",
+                    host=self.host,
                     port=self.port,
                     debug=False,
                     use_reloader=False,
@@ -246,14 +247,18 @@ class WorkerPool:
         num_workers: int = 4,
         first_worker_id: str = None,
         metrics_port: int = 8081,
+        metrics_host: str = "0.0.0.0",
     ):
         self.num_workers = num_workers
         self.first_worker_id = first_worker_id
         self.metrics_port = metrics_port
+        self.metrics_host = metrics_host
         self.workers = []
         self.threads = []
         self.running = False
-        self.metrics_server = WorkerMetricsServer(metrics_port)
+        self.metrics_server = WorkerMetricsServer(
+            metrics_port, host=metrics_host
+        )
 
     def start(self):
         if self.running:

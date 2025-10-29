@@ -255,16 +255,23 @@ def server_only(
     help="Python logging level (0-50)",
 )
 @click.option(
-    "--metrics-port",
+    "--host",
+    "-h",
+    default="0.0.0.0",
+    help="The interface to bind metrics server to",
+)
+@click.option(
+    "--port",
+    "-p",
     default=8081,
-    help="Port for worker metrics endpoint",
+    help="The port for worker metrics endpoint",
 )
 @click.argument(
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
 def worker_only(
-    worker_id, num_workers, redis_url, log_level, metrics_port, root_dir
+    worker_id, num_workers, redis_url, log_level, host, port, root_dir
 ):
     """Start a worker-only instance that processes jobs from Redis queue."""
     # Configure logging
@@ -281,7 +288,10 @@ def worker_only(
     # Use WorkerPool for both single worker and multiple workers
     num_workers = 1 if worker_id else num_workers
     worker_pool = WorkerPool(
-        num_workers, first_worker_id=worker_id, metrics_port=metrics_port
+        num_workers,
+        first_worker_id=worker_id,
+        metrics_port=port,
+        metrics_host=host,
     )
     logger = logging.getLogger(__name__)
 
@@ -292,7 +302,7 @@ def worker_only(
 
     logger.info(
         f"Worker metrics will be available at "
-        f"http://localhost:{metrics_port}/metrics"
+        f"http://{host}:{port}/metrics"
     )
 
     worker_pool.start()
