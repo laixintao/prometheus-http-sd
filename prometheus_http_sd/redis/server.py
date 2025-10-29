@@ -69,9 +69,7 @@ class ServerDispatcher:
                 )
                 cache_operations.labels(operation="expired").inc()
                 # Enqueue new job to refresh expired cache
-                self._enqueue_job(
-                    full_path, path, extra_args, "cache expired"
-                )
+                self._enqueue_job(full_path, path, extra_args, "cache expired")
                 raise CacheExpired(
                     updated_timestamp=updated_timestamp,
                     cache_excepire_seconds=self.cache_expire_seconds,

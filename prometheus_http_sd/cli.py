@@ -301,8 +301,7 @@ def worker_only(
         logger.info(f"Starting worker pool with {num_workers} workers")
 
     logger.info(
-        f"Worker metrics will be available at "
-        f"http://{host}:{port}/metrics"
+        f"Worker metrics will be available at " f"http://{host}:{port}/metrics"
     )
 
     worker_pool.start()
