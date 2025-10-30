@@ -41,10 +41,3 @@ jobs:
           pip install dist/*.whl
 
           prometheus-http-sd --help
-
-      - name: Upload to Pypi
-        env:
-          PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          . venv/bin/activate
-          poetry publish --username __token__ --password ${PASSWORD}
