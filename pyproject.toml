@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prometheus-http-sd"
-version = "3.0.1"
+version = "3.0.2"
 description = "Prometheus HTTP SD framework."
 authors = ["laixintao <laixintaoo@gmail.com>"]
 readme = 'README.md'
