@@ -103,15 +103,8 @@ def generate(root: str, path: str = "", **extra_args) -> TargetList:
     generators = get_generator_list(root, path)
     all_targets = []
 
-    futures = []
     for generator in generators:
-        future = generator_executor.submit(
-            run_generator, generator, **extra_args
-        )
-        futures.append(future)
-
-    for future in as_completed(futures):
-        target_list = future.result()
+        target_list = run_generator(generator, **extra_args)
         if isinstance(target_list, list):
             all_targets.extend(target_list)
         else:
@@ -128,17 +121,10 @@ def _timed_wrapper(*args, **kwargs):
 
 def generate_perf(root: str, path: str = "", **extra_args) -> Dict[str, float]:
     generators = get_generator_list(root, path)
-    futures = {}
     result = {}
 
     for generator in generators:
-        futures[generator] = generator_executor.submit(
-            _timed_wrapper, generator, **extra_args
-        )
-
-    for generator, future in futures.items():
-        time_cost = future.result()
-        result[generator] = time_cost
+        result[generator] = _timed_wrapper(generator, **extra_args)
     return {"generator_run_seconds": result}
 
 
