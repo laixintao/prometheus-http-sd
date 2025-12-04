@@ -221,24 +221,6 @@ class Worker:
             worker_jobs_processed.labels(
                 worker_id=self.worker_id, status="error"
             ).inc()
-        finally:
-            try:
-                success = self.queue.complete_job(job_data)
-                if success:
-                    logger.debug(
-                        f"Worker {self.worker_id} successfully completed "
-                        f"job {job_id}"
-                    )
-                else:
-                    logger.warning(
-                        f"Worker {self.worker_id} failed to complete job "
-                        f"{job_id} in queue"
-                    )
-            except Exception as e:
-                logger.error(
-                    f"Worker {self.worker_id} error completing job "
-                    f"{job_id}: {e}"
-                )
 
 
 class WorkerPool:
