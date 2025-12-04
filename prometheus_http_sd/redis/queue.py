@@ -34,8 +34,7 @@ class RedisJobQueue:
         jobs = self._redis_client.lrange(self.queue_name, 0, -1)
         main_queue_count = len(jobs)
         logger.debug(
-            f"Checking {main_queue_count} jobs in queue for "
-            f"{full_path}"
+            f"Checking {main_queue_count} jobs in queue for " f"{full_path}"
         )
 
         for job_json in jobs:
