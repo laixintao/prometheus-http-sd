@@ -274,7 +274,14 @@ def server_only(
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
 def worker_only(
-    worker_id, num_workers, redis_url, cache_seconds, log_level, host, port, root_dir
+    worker_id,
+    num_workers,
+    redis_url,
+    cache_seconds,
+    log_level,
+    host,
+    port,
+    root_dir,
 ):
     """Start a worker-only instance that processes jobs from Redis queue."""
     # Configure logging
