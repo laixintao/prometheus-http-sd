@@ -250,6 +250,9 @@ def server_only(
     help="Redis connection URL",
 )
 @click.option(
+    "--cache-seconds", "-m", default=300, help="Cache expire seconds"
+)
+@click.option(
     "--log-level",
     default=20,
     help="Python logging level (0-50)",
@@ -271,7 +274,14 @@ def server_only(
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
 def worker_only(
-    worker_id, num_workers, redis_url, log_level, host, port, root_dir
+    worker_id,
+    num_workers,
+    redis_url,
+    cache_seconds,
+    log_level,
+    host,
+    port,
+    root_dir,
 ):
     """Start a worker-only instance that processes jobs from Redis queue."""
     # Configure logging
@@ -284,6 +294,7 @@ def worker_only(
     config.__init__()
     config.root_dir = root_dir
     config.redis_url = redis_url
+    config.cache_expire_seconds = cache_seconds
 
     # Use WorkerPool for both single worker and multiple workers
     num_workers = 1 if worker_id else num_workers
