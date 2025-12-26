@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from urllib.parse import urlencode
 
 from ..config import config
 from ..sd import run_python
@@ -140,6 +141,35 @@ class ServerDispatcher:
     def is_job_processing(self, full_path: str):
         return self.queue.is_job_queued_or_processing(full_path)
 
+    def hard_reload(self, path: str, full_path: str, **extra_args):
+        """
+        Force a hard reload by clearing cache and enqueuing a new job.
+        Returns status information about the reload request.
+        """
+        # Clear normal cache
+        cache_deleted = self.cache.delete(full_path)
+        if cache_deleted:
+            logger.info(f"Cleared cache for {full_path}")
+
+        # Clear error cache
+        error_cache_key = f"error:{full_path}"
+        error_cache_deleted = self.cache.delete(error_cache_key)
+        if error_cache_deleted:
+            logger.info(f"Cleared error cache for {full_path}")
+
+        # Enqueue new job to regenerate
+        self._enqueue_job(
+            full_path, path, extra_args, "hard reload requested by user"
+        )
+
+        return {
+            "status": "reload_initiated",
+            "message": "Cache cleared. Please try again without ?reload=true",
+            "path": full_path,
+            "cache_cleared": cache_deleted,
+            "error_cache_cleared": error_cache_deleted,
+        }
+
 
 def create_server_app(prefix, cache_seconds):
     """Create Flask application for server-only mode."""
@@ -182,8 +212,30 @@ def create_server_app(prefix, cache_seconds):
     @app.route(f"{prefix}/targets/", defaults={"rest_path": ""})
     @app.route(f"{prefix}/targets/<path:rest_path>")
     def get_targets(rest_path):
+        # Handle hard reload request
+        if request.args.get("reload") == "true":
+
+            arg_list = dict(request.args)
+            if "reload" in arg_list:
+                del arg_list["reload"]
+
+            if arg_list:
+                query_string = urlencode(arg_list, doseq=True)
+                full_path_without_reload = (
+                    f"/targets/{rest_path}?{query_string}"
+                )
+            else:
+                full_path_without_reload = f"/targets/{rest_path}?"
+
+            logger.info(
+                f"Hard reload requested for {full_path_without_reload}"
+            )
+            reload_result = dispatcher.hard_reload(
+                rest_path, full_path_without_reload, **arg_list
+            )
+            return jsonify(reload_result)
+
         if request.args.get("debug") == "true":
-            from urllib.parse import urlencode
 
             arg_list = dict(request.args)
             if "debug" in arg_list:

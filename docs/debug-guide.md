@@ -10,6 +10,63 @@ The debug feature provides detailed information about:
 - Cache status and timing information
 - Whether a job is currently being processed
 
+## Hard Reload
+
+When you need to force a complete cache refresh and regeneration of targets, use the `?reload=true` parameter. This is useful when:
+- You've updated your target generator scripts
+- You want to clear cached errors
+- You need to force an immediate refresh regardless of cache state
+
+### How to Use Hard Reload
+
+Add `?reload=true` to any target request URL to trigger a hard reload.
+
+```bash
+# Force reload for a specific target
+curl http://127.0.0.1:8080/targets/my-service?reload=true
+
+# Force reload with additional parameters
+curl "http://127.0.0.1:8080/targets/my-service?env=prod&reload=true"
+```
+
+### Hard Reload Response
+
+The reload endpoint returns status information about what was cleared:
+
+```json
+{
+  "status": "reload_initiated",
+  "message": "Cache cleared and job enqueued for regeneration. Please try again without ?reload=true",
+  "path": "/targets/my-service?",
+  "cache_cleared": true,
+  "error_cache_cleared": false
+}
+```
+
+**Response Fields:**
+- `status`: Always `reload_initiated` on success
+- `message`: Instructions for the next step
+- `path`: The target path that was reloaded
+- `cache_cleared`: Whether normal cache was cleared (true if cache existed)
+- `error_cache_cleared`: Whether error cache was cleared (true if error existed)
+
+### After Hard Reload
+
+After triggering a hard reload:
+1. A job is automatically enqueued for regeneration
+2. Wait a moment for the worker to process the job
+3. Make a normal request (without `?reload=true`) to get fresh targets
+
+```bash
+# 1. Trigger hard reload
+curl http://127.0.0.1:8080/targets/my-service?reload=true
+# Response: {"status": "reload_initiated", ...}
+
+# 2. Wait a moment, then fetch fresh targets
+curl http://127.0.0.1:8080/targets/my-service
+# Response: Fresh target data (or cache miss if still processing)
+```
+
 ## How to Access Debug Information
 
 Add `?debug=true` to any target request URL to see debug information.
@@ -284,6 +341,21 @@ Monitor these Prometheus metrics for debugging:
 3. Check worker logs directly
 4. Verify error caching is enabled
 
+### Issue: Stale Cache After Updating Generator
+
+**Symptoms:**
+- You updated your target generator script
+- Old/outdated targets are still being returned
+- Cache hasn't expired yet
+
+**Solutions:**
+1. Force a hard reload to clear cache and regenerate:
+   ```bash
+   curl http://127.0.0.1:8080/targets/my-service?reload=true
+   ```
+2. Wait for the worker to process the regeneration job
+3. Make a normal request to get fresh targets
+
 ## Integration with Prometheus
 
 Prometheus will automatically retry failed HTTP SD requests:
@@ -330,6 +402,27 @@ curl http://127.0.0.1:8080/targets/my-service?debug=true
 # 5. Request again (cache hit)
 curl http://127.0.0.1:8080/targets/my-service
 # Response: JSON array of targets
+```
+
+## Example: Hard Reload Workflow
+
+Use this workflow when you've updated your generator and need fresh targets immediately:
+
+```bash
+# 1. Trigger hard reload to clear cache and enqueue regeneration
+curl http://127.0.0.1:8080/targets/my-service?reload=true
+# Response: {"status": "reload_initiated", "cache_cleared": true, ...}
+
+# 2. Wait for worker to process the job
+sleep 2
+
+# 3. Request fresh targets
+curl http://127.0.0.1:8080/targets/my-service
+# Response: Fresh JSON array of targets
+
+# 4. (Optional) Verify with debug
+curl http://127.0.0.1:8080/targets/my-service?debug=true
+# Response: Shows updated cache timestamp
 ```
 
 ## See Also
