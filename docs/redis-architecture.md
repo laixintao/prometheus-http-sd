@@ -103,6 +103,15 @@ All configuration is done through CLI arguments. CLI arguments take precedence a
 7. **Cache Store** → Worker stores result in Redis cache
 8. **Future Requests** → Server returns cached result
 
+### Hard Reload Flow
+
+When `?reload=true` is passed:
+1. **Clear Cache** → Server deletes normal cache and error cache for the path
+2. **Enqueue Job** → Server enqueues a new job for regeneration
+3. **Return Status** → Server returns reload confirmation
+4. **Job Processing** → Worker processes the job and stores fresh results
+5. **Future Requests** → Subsequent requests return fresh cached data
+
 ## Monitoring
 
 ### Metrics
@@ -114,6 +123,32 @@ All configuration is done through CLI arguments. CLI arguments take precedence a
 - **Queue Length**: `redis-cli llen target_generation_queue`
 - **Processing Length**: `redis-cli llen target_generation_queue:processing`
 - **Cache Keys**: `redis-cli keys "*"`
+
+## API Query Parameters
+
+The targets endpoint supports the following query parameters:
+
+| Parameter | Description |
+|-----------|-------------|
+| `reload=true` | Force a hard reload: clears cache and enqueues regeneration job |
+| `debug=true` | Returns debug information about cache state and errors |
+| Custom params | Any other parameters are passed to your target generator |
+
+### Example Requests
+
+```bash
+# Normal request
+curl http://127.0.0.1:8080/targets/my-service
+
+# Force cache refresh
+curl http://127.0.0.1:8080/targets/my-service?reload=true
+
+# Debug information
+curl http://127.0.0.1:8080/targets/my-service?debug=true
+
+# With custom parameters for generator
+curl "http://127.0.0.1:8080/targets/my-service?env=prod&region=us-east-1"
+```
 
 ## Benefits
 
