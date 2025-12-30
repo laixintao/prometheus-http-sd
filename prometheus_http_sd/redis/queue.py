@@ -16,6 +16,7 @@ class RedisJobQueue:
     ):
         self.redis_url = redis_url
         self.queue_name = queue_name
+        self.processing_queue_name = f"{queue_name}:processing"
         self._redis_client = redis.from_url(
             self.redis_url, decode_responses=True
         )
@@ -43,6 +44,21 @@ class RedisJobQueue:
                 logger.info(f"Found job in queue for {full_path}")
                 return True
 
+        processing_jobs = self._redis_client.lrange(
+            self.processing_queue_name, 0, -1
+        )
+        processing_queue_count = len(processing_jobs)
+        logger.debug(
+            f"Checking {processing_queue_count} jobs in processing queue for "
+            f"{full_path}"
+        )
+
+        for job_json in processing_jobs:
+            job = json.loads(job_json)
+            if job.get("full_path") == full_path:
+                logger.info(f"Found job in processing queue for {full_path}")
+                return True
+
         logger.debug(f"No existing job found for {full_path}")
         return False
 
@@ -50,9 +66,11 @@ class RedisJobQueue:
         """Update Prometheus queue metrics."""
         # Get queue length
         queue_length = self._redis_client.llen(self.queue_name)
+        processing_length = self._redis_client.llen(self.processing_queue_name)
 
         # Update metrics
         queue_job_gauge.labels(status="pending").set(queue_length)
+        queue_job_gauge.labels(status="processing").set(processing_length)
 
     def enqueue_job(self, job_data: Dict[str, Any]) -> bool:
         job_id = f"{job_data['full_path']}:{int(time.time())}"
@@ -74,6 +92,7 @@ class RedisJobQueue:
             _, job_json = result
             job_data = json.loads(job_json)
 
+            self._redis_client.lpush(self.processing_queue_name, job_json)
             logger.debug(f"Dequeued job {job_data.get('job_id', 'unknown')}")
 
             # Update queue metrics
@@ -81,3 +100,31 @@ class RedisJobQueue:
 
             return job_data
         return None
+
+    def complete_job(self, job_data: Dict[str, Any]) -> bool:
+        job_id = job_data.get("job_id", "unknown")
+
+        # Get all jobs in processing queue and find the one with matching
+        # job_id
+        processing_jobs = self._redis_client.lrange(
+            self.processing_queue_name, 0, -1
+        )
+        for job_json in processing_jobs:
+            try:
+                job = json.loads(job_json)
+                if job.get("job_id") == job_id:
+                    # Remove this specific job
+                    result = self._redis_client.lrem(
+                        self.processing_queue_name, 1, job_json
+                    )
+                    logger.debug(f"Completed job {job_id}")
+
+                    # Update queue metrics
+                    self._update_queue_metrics()
+
+                    return bool(result)
+            except json.JSONDecodeError:
+                continue
+
+        logger.warning(f"Job {job_id} not found in processing queue")
+        return False

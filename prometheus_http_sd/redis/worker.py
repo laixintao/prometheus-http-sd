@@ -221,7 +221,8 @@ class Worker:
             worker_jobs_processed.labels(
                 worker_id=self.worker_id, status="error"
             ).inc()
-
+        finally:
+            self.queue.complete_job(job_data)
 
 class WorkerPool:
     def __init__(
