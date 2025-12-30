@@ -269,6 +269,16 @@ def server_only(
     default=8081,
     help="The port for worker metrics endpoint",
 )
+@click.option(
+    "--stale-job-timeout",
+    default=300,
+    help="Jobs in processing queue longer than this (seconds) are considered stale",
+)
+@click.option(
+    "--stale-job-check-interval",
+    default=60,
+    help="How often to check for stale jobs (seconds)",
+)
 @click.argument(
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
@@ -281,6 +291,8 @@ def worker_only(
     log_level,
     host,
     port,
+    stale_job_timeout,
+    stale_job_check_interval,
     root_dir,
 ):
     """Start a worker-only instance that processes jobs from Redis queue."""
@@ -295,6 +307,8 @@ def worker_only(
     config.root_dir = root_dir
     config.redis_url = redis_url
     config.cache_expire_seconds = cache_seconds
+    config.stale_job_timeout_seconds = stale_job_timeout
+    config.stale_job_check_interval_seconds = stale_job_check_interval
 
     # Use WorkerPool for both single worker and multiple workers
     num_workers = 1 if worker_id else num_workers
@@ -303,6 +317,8 @@ def worker_only(
         first_worker_id=worker_id,
         metrics_port=port,
         metrics_host=host,
+        stale_job_timeout_seconds=stale_job_timeout,
+        stale_job_check_interval_seconds=stale_job_check_interval,
     )
     logger = logging.getLogger(__name__)
 

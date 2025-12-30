@@ -66,3 +66,9 @@ worker_started_counter = Counter(
     "How many times have workers been started?",
     ["worker_id"],
 )
+
+# Stale job cleaner metrics
+stale_jobs_cleaned = Counter(
+    "httpsd_redis_stale_jobs_cleaned_total",
+    "Total stale jobs removed from processing queue",
+)

@@ -2,8 +2,8 @@ import json
 import logging
 import redis
 import time
-from typing import Any, Dict, Optional
-from ..metrics import queue_job_gauge
+from typing import Any, Dict, List, Optional
+from ..metrics import queue_job_gauge, stale_jobs_cleaned
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,13 @@ class RedisJobQueue:
             _, job_json = result
             job_data = json.loads(job_json)
 
-            self._redis_client.lpush(self.processing_queue_name, job_json)
+            # Add processing start timestamp before pushing to processing queue
+            job_data["processing_started_at"] = time.time()
+            processing_job_json = json.dumps(job_data)
+
+            self._redis_client.lpush(
+                self.processing_queue_name, processing_job_json
+            )
             logger.debug(f"Dequeued job {job_data.get('job_id', 'unknown')}")
 
             # Update queue metrics
@@ -127,4 +133,59 @@ class RedisJobQueue:
                 continue
 
         logger.warning(f"Job {job_id} not found in processing queue")
+        return False
+
+    def get_stale_jobs(
+        self, stale_threshold_seconds: float
+    ) -> List[Dict[str, Any]]:
+        stale_jobs = []
+        current_time = time.time()
+
+        processing_jobs = self._redis_client.lrange(
+            self.processing_queue_name, 0, -1
+        )
+
+        for job_json in processing_jobs:
+            try:
+                job = json.loads(job_json)
+                processing_started_at = job.get("processing_started_at")
+
+                if processing_started_at is None:
+                    # Legacy job without timestamp - consider it stale
+                    logger.warning(
+                        f"Found job without processing_started_at: "
+                        f"{job.get('job_id', 'unknown')}"
+                    )
+                    job["_raw_json"] = job_json
+                    stale_jobs.append(job)
+                elif current_time - processing_started_at > stale_threshold_seconds:
+                    logger.debug(
+                        f"Found stale job {job.get('job_id', 'unknown')} "
+                        f"with age {current_time - processing_started_at:.1f}s"
+                    )
+                    job["_raw_json"] = job_json
+                    stale_jobs.append(job)
+            except json.JSONDecodeError:
+                logger.error(f"Failed to decode job JSON: {job_json}")
+                continue
+
+        return stale_jobs
+
+    def remove_stale_job(self, job_data: Dict[str, Any]) -> bool:
+        job_id = job_data.get("job_id", "unknown")
+        raw_json = job_data.get("_raw_json")
+
+        if not raw_json:
+            return False
+
+        removed = self._redis_client.lrem(
+            self.processing_queue_name, 1, raw_json
+        )
+        if removed:
+            logger.info(f"Removed stale job {job_id}")
+            stale_jobs_cleaned.inc()
+            self._update_queue_metrics()
+            return True
+
+        logger.warning(f"Failed to remove stale job {job_id}")
         return False
