@@ -123,9 +123,7 @@ class Worker:
         self._stop_event.set()
 
         if self._processing_job:
-            logger.info(
-                f"Worker {self.worker_id} completing current job..."
-            )
+            logger.info(f"Worker {self.worker_id} completing current job...")
 
     def _run(self):
         while self.running and not self._stop_event.is_set():
@@ -409,9 +407,7 @@ class WorkerPool:
         # Wait for all workers to finish their current jobs
         for i, (worker, thread) in enumerate(zip(self.workers, self.threads)):
             if worker._processing_job:
-                logger.info(
-                    f"Waiting for {worker.worker_id} to complete job "
-                )
+                logger.info(f"Waiting for {worker.worker_id} to complete job ")
             # Wait indefinitely for graceful shutdown
             thread.join()
             logger.debug(f"Worker {worker.worker_id} stopped")
