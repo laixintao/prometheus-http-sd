@@ -158,7 +158,10 @@ class RedisJobQueue:
                     )
                     job["_raw_json"] = job_json
                     stale_jobs.append(job)
-                elif current_time - processing_started_at > stale_threshold_seconds:
+                elif (
+                    current_time - processing_started_at
+                    > stale_threshold_seconds
+                ):
                     logger.debug(
                         f"Found stale job {job.get('job_id', 'unknown')} "
                         f"with age {current_time - processing_started_at:.1f}s"

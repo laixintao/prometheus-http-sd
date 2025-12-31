@@ -33,7 +33,7 @@ class ServerDispatcher:
     def _enqueue_job(
         self, full_path: str, path: str, extra_args: dict, reason: str = ""
     ):
-        if self.queue.is_job_queued_or_processing(full_path):
+        if self.is_job_processing(full_path):
             logger.info(
                 f"Job already queued/processing for {full_path}, "
                 f"skipping duplicate"
@@ -47,10 +47,7 @@ class ServerDispatcher:
         }
 
         if self.queue.enqueue_job(job_data):
-            log_msg = f"Enqueued job for {full_path}"
-            if reason:
-                log_msg += f" ({reason})"
-            logger.info(log_msg)
+            logger.info(f"Enqueued job for {full_path} ({reason})")
         else:
             logger.error(f"Failed to enqueue job for {full_path}")
 
@@ -141,11 +138,14 @@ class ServerDispatcher:
     def is_job_processing(self, full_path: str):
         return self.queue.is_job_queued_or_processing(full_path)
 
-    def hard_reload(self, path: str, full_path: str, **extra_args):
-        """
-        Force a hard reload by clearing cache and enqueuing a new job.
-        Returns status information about the reload request.
-        """
+    def hard_reload(
+        self,
+        path: str,
+        full_path: str,
+        timeout: float = 60.0,
+        poll_interval: float = 0.5,
+        **extra_args,
+    ):
         # Clear normal cache
         cache_deleted = self.cache.delete(full_path)
         if cache_deleted:
@@ -159,15 +159,51 @@ class ServerDispatcher:
 
         # Enqueue new job to regenerate
         self._enqueue_job(
-            full_path, path, extra_args, "hard reload requested by user"
+            full_path,
+            path,
+            extra_args,
+            "hard reload requested by user",
         )
 
+        # Wait for worker to complete
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            # Check if result is in cache
+            data = self.cache.get(full_path)
+            if data:
+                logger.info(
+                    f"Hard reload completed for {full_path} "
+                    f"in {time.time() - start_time:.2f}s"
+                )
+                return {
+                    "status": "reload_complete",
+                    "path": full_path,
+                    "results": data["results"],
+                    "processing_time": f"{time.time() - start_time:.2f}s",
+                }
+
+            # Check if there was an error
+            error_data = self.cache.get(error_cache_key)
+            if error_data and error_data.get("status") == "error":
+                logger.error(f"Hard reload failed for {full_path}")
+                return {
+                    "status": "reload_error",
+                    "path": full_path,
+                    "error": error_data.get("error_details", {}),
+                    "processing_time": f"{time.time() - start_time:.2f}s",
+                }
+
+            time.sleep(poll_interval)
+
+        # Timeout reached
+        logger.warning(f"Hard reload timeout for {full_path} after {timeout}s")
         return {
-            "status": "reload_initiated",
-            "message": "Cache cleared. Please try again without ?reload=true",
+            "status": "reload_timeout",
+            "message": "Please reload the page without ?reload=true later.",
+            "processing_time": f"{time.time() - start_time:.2f}s",
+            "timeout": f"{timeout:.2f}s",
             "path": full_path,
-            "cache_cleared": cache_deleted,
-            "error_cache_cleared": error_cache_deleted,
+            "suggestion": "Try again later without ?reload=true",
         }
 
 
@@ -214,7 +250,6 @@ def create_server_app(prefix, cache_seconds):
     def get_targets(rest_path):
         # Handle hard reload request
         if request.args.get("reload") == "true":
-
             arg_list = dict(request.args)
             if "reload" in arg_list:
                 del arg_list["reload"]
@@ -231,7 +266,11 @@ def create_server_app(prefix, cache_seconds):
                 f"Hard reload requested for {full_path_without_reload}"
             )
             reload_result = dispatcher.hard_reload(
-                rest_path, full_path_without_reload, **arg_list
+                rest_path,
+                full_path_without_reload,
+                timeout=config.hard_reload_timeout_seconds,
+                poll_interval=config.hard_reload_poll_interval_seconds,
+                **arg_list,
             )
             return jsonify(reload_result)
 

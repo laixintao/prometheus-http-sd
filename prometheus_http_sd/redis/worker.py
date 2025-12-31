@@ -224,6 +224,7 @@ class Worker:
         finally:
             self.queue.complete_job(job_data)
 
+
 class StaleJobCleaner:
     """Background service that periodically cleans up stale jobs from the
     processing queue.
@@ -285,7 +286,9 @@ class StaleJobCleaner:
             self._stop_event.wait(timeout=self.check_interval_seconds)
 
     def _clean_stale_jobs(self):
-        logger.info(f"Cleaning stale jobs with timeout {self.stale_timeout_seconds} seconds")
+        logger.info(
+            f"Cleaning stale jobs > {self.stale_timeout_seconds} seconds"
+        )
         stale_jobs = self.queue.get_stale_jobs(self.stale_timeout_seconds)
 
         if not stale_jobs:
