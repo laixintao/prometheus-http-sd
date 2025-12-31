@@ -331,8 +331,6 @@ def worker_only(
         first_worker_id=worker_id,
         metrics_port=port,
         metrics_host=host,
-        stale_job_timeout_seconds=stale_job_timeout,
-        stale_job_check_interval_seconds=stale_job_check_interval,
     )
     logger = logging.getLogger(__name__)
 

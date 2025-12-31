@@ -320,9 +320,6 @@ class WorkerPool:
         first_worker_id: str = None,
         metrics_port: int = 8081,
         metrics_host: str = "0.0.0.0",
-        enable_stale_job_cleaner: bool = True,
-        stale_job_timeout_seconds: int = None,
-        stale_job_check_interval_seconds: int = None,
     ):
         self.num_workers = num_workers
         self.first_worker_id = first_worker_id
@@ -335,21 +332,11 @@ class WorkerPool:
             metrics_port, host=metrics_host
         )
 
-        # Stale job cleaner configuration
-        self.enable_stale_job_cleaner = enable_stale_job_cleaner
-        self.stale_job_cleaner = None
-        if enable_stale_job_cleaner:
-            self.stale_job_cleaner = StaleJobCleaner(
-                redis_url=config.redis_url,
-                stale_timeout_seconds=(
-                    stale_job_timeout_seconds
-                    or config.stale_job_timeout_seconds
-                ),
-                check_interval_seconds=(
-                    stale_job_check_interval_seconds
-                    or config.stale_job_check_interval_seconds
-                ),
-            )
+        self.stale_job_cleaner = StaleJobCleaner(
+            redis_url=config.redis_url,
+            stale_timeout_seconds=config.stale_job_timeout_seconds,
+            check_interval_seconds=config.stale_job_check_interval_seconds,
+        )
 
     def start(self):
         if self.running:
@@ -362,9 +349,8 @@ class WorkerPool:
         # Start metrics server
         self.metrics_server.start()
 
-        # Start stale job cleaner if enabled
-        if self.stale_job_cleaner:
-            self.stale_job_cleaner.start()
+        # Start stale job cleaner
+        self.stale_job_cleaner.start()
 
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -397,9 +383,8 @@ class WorkerPool:
         # Stop metrics server
         self.metrics_server.stop()
 
-        # Stop stale job cleaner if enabled
-        if self.stale_job_cleaner:
-            self.stale_job_cleaner.stop()
+        # Stop stale job cleaner
+        self.stale_job_cleaner.stop()
 
         for worker in self.workers:
             worker.stop()
