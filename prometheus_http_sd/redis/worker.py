@@ -94,6 +94,7 @@ class Worker:
         self.cache = RedisCache(config.redis_url)
         self.queue = RedisJobQueue(config.redis_url)
         self._stop_event = threading.Event()
+        self._processing_job = False
 
     def start(self):
         if self.running:
@@ -121,13 +122,22 @@ class Worker:
         self.running = False
         self._stop_event.set()
 
+        if self._processing_job:
+            logger.info(
+                f"Worker {self.worker_id} completing current job..."
+            )
+
     def _run(self):
         while self.running and not self._stop_event.is_set():
             try:
                 job_data = self.queue.dequeue_job(timeout=1)
 
                 if job_data:
-                    self._process_job(job_data)
+                    self._processing_job = True
+                    try:
+                        self._process_job(job_data)
+                    finally:
+                        self._processing_job = False
                 else:
                     continue
 
@@ -397,7 +407,15 @@ class WorkerPool:
             worker.stop()
 
         for thread in self.threads:
-            thread.join(timeout=5)
+        # Wait for all workers to finish their current jobs
+        for i, (worker, thread) in enumerate(zip(self.workers, self.threads)):
+            if worker._processing_job:
+                logger.info(
+                    f"Waiting for {worker.worker_id} to complete job "
+                )
+            # Wait indefinitely for graceful shutdown
+            thread.join()
+            logger.debug(f"Worker {worker.worker_id} stopped")
 
         logger.info("Worker pool stopped")
 
