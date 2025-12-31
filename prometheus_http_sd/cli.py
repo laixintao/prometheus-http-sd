@@ -192,6 +192,16 @@ def check(root_dir, ignore_path):
     default=20,
     help="Python logging level (0-50)",
 )
+@click.option(
+    "--hard-reload-timeout",
+    default=60.0,
+    help="Timeout in seconds for hard reload to wait for worker response",
+)
+@click.option(
+    "--hard-reload-poll-interval",
+    default=0.5,
+    help="Poll interval in seconds when waiting for hard reload completion",
+)
 def server_only(
     host,
     port,
@@ -202,6 +212,8 @@ def server_only(
     cache_seconds,
     redis_url,
     log_level,
+    hard_reload_timeout,
+    hard_reload_poll_interval,
 ):
     # Configure logging
     config_log(log_level)
@@ -214,6 +226,8 @@ def server_only(
     config.root_dir = root_dir
     config.redis_url = redis_url
     config.cache_expire_seconds = cache_seconds
+    config.hard_reload_timeout_seconds = hard_reload_timeout
+    config.hard_reload_poll_interval_seconds = hard_reload_poll_interval
 
     app = create_server_app(
         url_prefix,
@@ -269,6 +283,16 @@ def server_only(
     default=8081,
     help="The port for worker metrics endpoint",
 )
+@click.option(
+    "--stale-job-timeout",
+    default=300,
+    help="Jobs in processing queue > this (seconds) are considered stale",
+)
+@click.option(
+    "--stale-job-check-interval",
+    default=60,
+    help="How often to check for stale jobs (seconds)",
+)
 @click.argument(
     "root_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
@@ -281,6 +305,8 @@ def worker_only(
     log_level,
     host,
     port,
+    stale_job_timeout,
+    stale_job_check_interval,
     root_dir,
 ):
     """Start a worker-only instance that processes jobs from Redis queue."""
@@ -295,6 +321,8 @@ def worker_only(
     config.root_dir = root_dir
     config.redis_url = redis_url
     config.cache_expire_seconds = cache_seconds
+    config.stale_job_timeout_seconds = stale_job_timeout
+    config.stale_job_check_interval_seconds = stale_job_check_interval
 
     # Use WorkerPool for both single worker and multiple workers
     num_workers = 1 if worker_id else num_workers
