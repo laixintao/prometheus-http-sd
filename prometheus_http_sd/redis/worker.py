@@ -406,7 +406,6 @@ class WorkerPool:
         for worker in self.workers:
             worker.stop()
 
-        for thread in self.threads:
         # Wait for all workers to finish their current jobs
         for i, (worker, thread) in enumerate(zip(self.workers, self.threads)):
             if worker._processing_job:
